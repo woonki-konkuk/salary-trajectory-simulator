@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>급여 경력 궤적 시뮬레이터</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',sans-serif;background:#f5f5f3;color:#1a1a18;font-size:14px;line-height:1.6}
+.app{max-width:1140px;margin:0 auto;padding:20px 16px}
+h1{font-size:19px;font-weight:500;margin-bottom:3px}
+.subtitle{font-size:12px;color:#6b6b67;margin-bottom:16px}
+.tabs{display:flex;border-bottom:1.5px solid #d3d1c7;margin-bottom:20px}
+.tab{padding:9px 18px;font-size:13px;cursor:pointer;border:none;background:none;color:#888;border-bottom:2.5px solid transparent;margin-bottom:-1.5px;transition:all .15s;white-space:nowrap}
+.tab:hover{color:#333}.tab.active{color:#1a1a18;border-bottom-color:#185FA5;font-weight:500}
+.panel{display:none}.panel.active{display:block}
+.row{display:flex;gap:16px;align-items:flex-start}
+.col-left{width:360px;flex-shrink:0}
+.col-right{flex:1;min-width:0}
+.card{background:#fff;border:1px solid #e5e4df;border-radius:10px;padding:15px;margin-bottom:13px}
+.card-title{font-size:13px;font-weight:500;margin-bottom:11px;padding-bottom:8px;border-bottom:1px solid #f0eeea}
+.ctrl{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.ctrl label{font-size:12px;color:#6b6b67;min-width:130px;flex-shrink:0}
+.ctrl input[type=range]{flex:1;accent-color:#378ADD}
+.ctrl select{flex:1;padding:5px 7px;font-size:12px;border:1px solid #d3d1c7;border-radius:6px;background:#fff}
+.ctrl input[type=checkbox]{width:16px;height:16px;accent-color:#378ADD;flex-shrink:0}
+.val{font-size:12px;font-weight:500;min-width:54px;text-align:right}
+.btn{padding:6px 13px;font-size:12px;border:1px solid #d3d1c7;border-radius:6px;background:#fff;cursor:pointer;color:#1a1a18}
+.btn:hover{background:#f5f5f3}.btn-primary{background:#185FA5;color:#fff;border-color:#185FA5}.btn-primary:hover{background:#0c447c}
+.btn-danger{color:#A32D2D;border-color:#F7C1C1}.btn-danger:hover{background:#FCEBEB}
+.btn-sm{padding:3px 9px;font-size:11px}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:7px;margin:11px 0}
+.metric{background:#f5f5f3;border-radius:7px;padding:9px 11px}
+.metric .lbl{font-size:10px;color:#888;margin-bottom:1px;text-transform:uppercase;letter-spacing:.4px}
+.metric .num{font-size:15px;font-weight:500}
+.person-card{background:#fff;border:1.5px solid #e5e4df;border-radius:8px;padding:10px 12px;cursor:pointer;margin-bottom:7px}
+.person-card.active{border-color:#185FA5;background:#f0f6fc}
+.avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0}
+.badge{display:inline-block;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:500;vertical-align:middle}
+.badge-S{background:#E6F1FB;color:#185FA5}.badge-A{background:#EAF3DE;color:#3B6D11}
+.badge-B{background:#fff8e6;color:#854F0B}.badge-C{background:#FBEAF0;color:#993556}
+.badge-D{background:#FCEBEB;color:#A32D2D}.badge-info{background:#E6F1FB;color:#185FA5}
+.badge-warn{background:#FAEEDA;color:#854F0B}
+.year-row{display:flex;align-items:center;gap:5px;margin-bottom:4px;background:#f9f9f7;border-radius:5px;padding:4px 7px}
+.year-num{font-size:11px;color:#888;min-width:30px;font-weight:500}
+.year-gtag{font-size:11px;color:#185FA5;min-width:24px;font-weight:500}
+select.yr-sel{padding:2px 4px;font-size:11px;border:1px solid #d3d1c7;border-radius:4px;background:#fff}
+.insight{background:#E6F1FB;border-left:3px solid #378ADD;border-radius:0 7px 7px 0;padding:9px 13px;font-size:12px;color:#0c447c;margin:10px 0;line-height:1.6}
+.warn-box{background:#FAEEDA;border-left:3px solid #BA7517;border-radius:0 7px 7px 0;padding:9px 13px;font-size:12px;color:#633806;margin:7px 0}
+.pros-cons{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
+.pros{background:#EAF3DE;border:1px solid #C0DD97;border-radius:7px;padding:10px}
+.cons{background:#FCEBEB;border:1px solid #F7C1C1;border-radius:7px;padding:10px}
+.pros h4{font-size:11px;font-weight:500;color:#3B6D11;margin-bottom:5px}
+.cons h4{font-size:11px;font-weight:500;color:#A32D2D;margin-bottom:5px}
+.pros li,.cons li{font-size:11px;margin-bottom:3px;list-style:none;padding-left:13px;position:relative}
+.pros li::before{content:'✓';position:absolute;left:0;color:#3B6D11}.cons li::before{content:'✗';position:absolute;left:0;color:#A32D2D}
+.chart-box{background:#fff;border:1px solid #e5e4df;border-radius:10px;padding:15px;margin-bottom:13px}
+.legend-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;font-size:11px;color:#555}
+.leg-item{display:flex;align-items:center;gap:4px}
+.leg-swatch{width:12px;height:12px;border-radius:2px;display:inline-block;flex-shrink:0}
+.section-label{font-size:12px;font-weight:500;color:#555;margin:10px 0 5px}
+.cmp-table{width:100%;border-collapse:collapse;font-size:12px}
+.cmp-table th{background:#f5f5f3;padding:6px 9px;text-align:left;font-weight:500;border-bottom:1px solid #e5e4df;color:#555;white-space:nowrap}
+.cmp-table td{padding:6px 9px;border-bottom:1px solid #f0eeea;vertical-align:middle}
+.cmp-table tr:last-child td{border-bottom:none}
+.pattern-btn{padding:4px 8px;font-size:11px;border:1px solid #d3d1c7;border-radius:4px;background:#fff;cursor:pointer;margin-bottom:3px}
+.pattern-btn:hover{background:#f0f6fc;border-color:#185FA5;color:#185FA5}
+.tip{font-size:11px;color:#888;font-style:italic;margin-bottom:5px}
+.divider{height:1px;background:#f0eeea;margin:10px 0}
+.flex-end{display:flex;justify-content:flex-end;gap:7px;margin-top:9px}
+.group-label{font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:.5px;margin:12px 0 5px;padding-bottom:3px;border-bottom:1px solid #f0eeea}
+.radio-opt{display:flex;align-items:flex-start;gap:7px;padding:7px 9px;border:1px solid #e5e4df;border-radius:6px;cursor:pointer;margin-bottom:5px}
+.radio-opt:hover{border-color:#b5d4f4}.radio-opt.selected{border-color:#185FA5;background:#f0f6fc}
+.radio-opt input[type=radio]{margin-top:2px;accent-color:#185FA5;flex-shrink:0}
+.radio-opt .opt-title{font-size:12px;font-weight:500}.radio-opt .opt-desc{font-size:11px;color:#888;margin-top:1px}
+.grade-tbl{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:4px}
+.grade-tbl th{background:#f5f5f3;padding:5px 3px;text-align:center;font-weight:500;font-size:11px;color:#666;border-bottom:1px solid #e5e4df}
+.grade-tbl td{padding:3px;text-align:center}
+.grade-tbl input[type=number]{width:50px;padding:3px 4px;font-size:12px;border:1px solid #d3d1c7;border-radius:4px;text-align:center}
+.grade-tbl input[type=number]:focus{outline:none;border-color:#185FA5}
+/* SVG band chart */
+.band-svg-wrap{width:100%;overflow:hidden}
+.band-svg-wrap svg{display:block;width:100%}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>급여 경력 궤적 시뮬레이터</h1>
+<p class="subtitle">Pay Band 설계 → Pay Band 위에서 개인 궤적 확인</p>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('band')">① Pay Band 설정</button>
+  <button class="tab" onclick="switchTab('trajectory')">② 경력 궤적 설계</button>
+</div>
+
+<!-- TAB 1 -->
+<div id="tab-band" class="panel active">
+  <div class="row">
+    <div class="col-left">
+      <div class="card">
+        <div class="card-title">기본 구조</div>
+        <div class="ctrl"><label>직급 수</label>
+          <select id="b-numGrades" onchange="onNumGradesChange()">
+            <option value="3">3단계</option><option value="4">4단계</option>
+            <option value="5" selected>5단계</option><option value="6">6단계</option><option value="7">7단계</option>
+          </select>
+        </div>
+        <div class="ctrl"><label>G1 기준 중간값 (만원)</label>
+          <input type="range" id="b-base" min="1500" max="6000" step="100" value="2500" oninput="updateBand()">
+          <span class="val" id="b-base-v">2,500만</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">직급별 중간값 상승률 (%)</div>
+        <p class="tip">각 직급 간 중간값 상승률을 직접 입력</p>
+        <div id="midrise-inputs"></div>
+        <div class="group-label">패턴 빠른 설정</div>
+        <div class="radio-opt selected" id="mr-flat-opt" onclick="applyMRP('flat')"><input type="radio" name="mr-p" value="flat" checked><div><div class="opt-title">균일</div><div class="opt-desc">모든 구간 동일 상승률</div></div></div>
+        <div class="radio-opt" id="mr-prog-opt" onclick="applyMRP('progressive')"><input type="radio" name="mr-p" value="progressive"><div><div class="opt-title">상후하박</div><div class="opt-desc">상위 직급으로 갈수록 더 큰 폭 상승</div></div></div>
+        <div class="radio-opt" id="mr-deg-opt" onclick="applyMRP('degressive')"><input type="radio" name="mr-p" value="degressive"><div><div class="opt-title">하후상박</div><div class="opt-desc">하위 직급 구간 차이를 크게, 상위는 좁게</div></div></div>
+        <div class="ctrl" style="margin-top:7px"><label>기준 상승률 (%)</label>
+          <input type="range" id="b-mrBase" min="5" max="60" step="5" value="25" oninput="applyMRP(curMRP())">
+          <span class="val" id="b-mrBase-v">25%</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">직급별 범위폭 (%)</div>
+        <p class="tip">각 직급의 범위폭 (최댓값−최솟값)/중간값×100</p>
+        <div id="spread-inputs"></div>
+        <div class="group-label">패턴 빠른 설정</div>
+        <div class="radio-opt selected" id="sp-grad-opt" onclick="applySPP('graduated')"><input type="radio" name="sp-p" value="graduated" checked><div><div class="opt-title">상후하박</div><div class="opt-desc">하위 좁게, 상위 넓게 — 일반적 설계</div></div></div>
+        <div class="radio-opt" id="sp-flat-opt" onclick="applySPP('flat')"><input type="radio" name="sp-p" value="flat"><div><div class="opt-title">균일</div><div class="opt-desc">모든 직급 동일 범위폭</div></div></div>
+        <div class="radio-opt" id="sp-broad-opt" onclick="applySPP('broadband')"><input type="radio" name="sp-p" value="broadband"><div><div class="opt-title">Broad Band</div><div class="opt-desc">전 직급 넓은 범위폭</div></div></div>
+        <div class="ctrl" style="margin-top:7px"><label>하위직급 범위폭 (%)</label>
+          <input type="range" id="b-spLow" min="5" max="40" step="5" value="20" oninput="applySPP(curSPP())">
+          <span class="val" id="b-spLow-v">20%</span>
+        </div>
+        <div class="ctrl" id="b-spHigh-row"><label>상위직급 범위폭 (%)</label>
+          <input type="range" id="b-spHigh" min="20" max="80" step="5" value="40" oninput="applySPP(curSPP())">
+          <span class="val" id="b-spHigh-v">40%</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">직급별 평균 승진 소요기간 (년)</div>
+        <p class="tip">x축 기준 — 각 직급에서 다음 직급까지 평균 체류 기간</p>
+        <div id="promo-dur-inputs"></div>
+        <div class="divider"></div>
+        <div class="ctrl"><label>Pay Band x축</label>
+          <input type="checkbox" id="b-timeScale" checked onchange="updateBand()">
+          <span style="font-size:11px;color:#888;flex:1">ON: 승진 소요기간에 비례해 폭 표시</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">성과등급별 기본 인상률 (%)</div>
+        <div class="ctrl"><label>직급별 인상률 감쇠</label>
+          <input type="checkbox" id="b-payzone" onchange="updateBand()">
+          <span style="font-size:11px;color:#888;flex:1">선택: 고직급 인건비 통제용</span>
+        </div>
+        <div class="ctrl" id="pz-row"><label>직급당 감소율 (%p)</label>
+          <input type="range" id="b-pzF" min="5" max="25" step="5" value="12" oninput="updateBand()">
+          <span class="val" id="b-pzF-v">12%p</span>
+        </div>
+        <div class="ctrl"><label>Compa-ratio Pay Zone</label>
+          <input type="checkbox" id="b-compazone" checked onchange="updateBand()">
+          <span style="font-size:11px;color:#888;flex:1">ON: 동일 직급 내 밴드 위치별 인상률 조정</span>
+        </div>
+        <div class="ctrl" id="cz-row"><label>Zone 조정 강도</label>
+          <input type="range" id="b-czF" min="10" max="50" step="5" value="25" oninput="updateBand()">
+          <span class="val" id="b-czF-v">25%</span>
+        </div>
+        <div class="divider"></div>
+        <div class="ctrl"><label>S등급</label><input type="range" id="b-S" min="5" max="25" step="1" value="10" oninput="updateBand()"><span class="val" id="b-S-v">10%</span></div>
+        <div class="ctrl"><label>A등급</label><input type="range" id="b-A" min="3" max="18" step="1" value="7" oninput="updateBand()"><span class="val" id="b-A-v">7%</span></div>
+        <div class="ctrl"><label>B등급</label><input type="range" id="b-B" min="1" max="12" step="1" value="4" oninput="updateBand()"><span class="val" id="b-B-v">4%</span></div>
+        <div class="ctrl"><label>C등급</label><input type="range" id="b-C" min="0" max="6" step="1" value="1" oninput="updateBand()"><span class="val" id="b-C-v">1%</span></div>
+        <div class="ctrl"><label>D등급</label><input type="range" id="b-D" min="0" max="3" step="1" value="0" oninput="updateBand()"><span class="val" id="b-D-v">0%</span></div>
+      </div>
+    </div>
+
+    <div class="col-right">
+      <div class="chart-box">
+        <div class="section-label" style="margin-top:0;margin-bottom:8px">Pay Band 구조</div>
+        <div class="legend-row">
+          <span class="leg-item"><span class="leg-swatch" style="background:rgba(55,138,221,0.16);border:1.5px solid rgba(24,95,165,0.45)"></span>밴드 범위</span>
+          <span class="leg-item"><span style="width:20px;height:2px;background:#E24B4A;display:inline-block;vertical-align:middle"></span>중간값</span>
+          <span class="leg-item"><span style="width:20px;height:0;border-top:2px dashed #aaa;display:inline-block;vertical-align:middle"></span>최솟값/최댓값</span>
+          <span class="leg-item" id="band-xmode-label" style="color:#888">x축 = 평균 승진 소요기간</span>
+        </div>
+        <div class="band-svg-wrap" id="band-svg-wrap-1"></div>
+      </div>
+      <div class="metrics" id="band-metrics"></div>
+      <div class="chart-box">
+        <div class="section-label" style="margin-top:0;margin-bottom:6px">직급 × 성과등급 기준 인상률 매트릭스(Compa-ratio 조정 전)</div>
+        <div style="overflow-x:auto"><table class="cmp-table" id="rate-matrix"><thead></thead><tbody></tbody></table></div>
+      </div>
+      <div class="chart-box">
+        <div class="section-label" style="margin-top:0;margin-bottom:6px">직급별 구조 요약</div>
+        <div style="overflow-x:auto"><table class="cmp-table">
+          <thead><tr><th>직급</th><th>최솟값</th><th>중간값</th><th>최댓값</th><th>범위폭</th><th>중간값 상승률</th><th>중복비율</th></tr></thead>
+          <tbody id="overlap-tbody"></tbody>
+        </table></div>
+      </div>
+      <div id="band-insight" class="insight"></div>
+      <div id="band-pros-cons"></div>
+    </div>
+  </div>
+</div>
+
+<!-- TAB 2 -->
+<div id="tab-trajectory" class="panel">
+
+  <!-- 상단: 왼쪽 옵션 | 오른쪽 차트 -->
+  <div class="row" style="margin-bottom:0">
+    <div class="col-left">
+
+      <div class="card">
+        <div class="card-title">승진 시 급여 처리 방식</div>
+        <div class="radio-opt" id="pm-keep" onclick="selectPromoMode('keep-or-min')"><input type="radio" name="promo-mode" value="keep-or-min"><div><div class="opt-title">하한 보정형</div><div class="opt-desc">현 급여를 유지하되, 상위직급 하한보다 낮으면 하한까지 보정.</div></div></div>
+        <div class="radio-opt selected" id="pm-bonus" onclick="selectPromoMode('bonus')"><input type="radio" name="promo-mode" value="bonus" checked><div><div class="opt-title">승진가산형</div><div class="opt-desc">현 급여에 승진 인상률을 더하고, 하한 미달 시 보정.</div></div></div>
+        <div class="ctrl" id="promo-bonus-row" style="margin-top:6px"><label>승진 인상률 (%)</label>
+          <input type="range" id="b-promo" min="3" max="40" step="1" value="15" oninput="document.getElementById('b-promo-v').textContent=this.value+'%';updateBand()">
+          <span class="val" id="b-promo-v">15%</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">인상률 조정 설정</div>
+        <div class="ctrl"><label>직급별 인상률 감쇠</label>
+          <input type="checkbox" id="t-payzone" onchange="BS.payzone=this.checked;document.getElementById('b-payzone').checked=this.checked;updateBand()">
+          <span style="font-size:11px;color:#888;flex:1">선택: 고직급 인건비 통제용</span>
+        </div>
+        <div class="ctrl" id="t-pzF-row"><label>직급당 감소율 (%p)</label>
+          <input type="range" id="t-pzF" min="5" max="25" step="5" value="12" oninput="BS.pzFactor=+this.value;document.getElementById('b-pzF').value=this.value;document.getElementById('t-pzF-v').textContent=this.value+'%p';updateBand()">
+          <span class="val" id="t-pzF-v">12%p</span>
+        </div>
+        <div class="ctrl"><label>Compa-ratio Pay Zone</label>
+          <input type="checkbox" id="t-compazone" checked onchange="BS.compaZone=this.checked;document.getElementById('b-compazone').checked=this.checked;updateBand()">
+          <span style="font-size:11px;color:#888;flex:1">ON: 동일 직급 내 위치별 조정</span>
+        </div>
+        <div class="ctrl" id="t-czF-row"><label>Zone 조정 강도</label>
+          <input type="range" id="t-czF" min="10" max="50" step="5" value="25" oninput="BS.czFactor=+this.value;document.getElementById('b-czF').value=this.value;document.getElementById('t-czF-v').textContent=this.value+'%';updateBand()">
+          <span class="val" id="t-czF-v">25%</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">인원 추가</div>
+        <div style="display:flex;gap:6px">
+          <input type="text" id="new-name" placeholder="이름 입력" style="flex:1;padding:5px 9px;font-size:12px;border:1px solid #d3d1c7;border-radius:6px">
+          <button class="btn btn-primary btn-sm" onclick="addPerson()">+ 추가</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="col-right">
+      <div class="chart-box">
+        <div class="section-label" style="margin-top:0;margin-bottom:8px">Pay Band 위 개인 궤적</div>
+        <div class="legend-row" id="traj-legend-row">
+          <span class="leg-item"><span class="leg-swatch" style="background:rgba(55,138,221,0.11);border:1px dashed rgba(24,95,165,0.30)"></span>직급별 수평 밴드</span>
+          <span class="leg-item"><span style="width:20px;height:0;border-top:2px dashed #E24B4A;display:inline-block;vertical-align:middle;opacity:0.4"></span>중간값</span>
+          <span class="leg-item">▲ = 승진</span>
+          <span class="leg-item"><span style="width:10px;height:10px;border-radius:50%;background:#E24B4A;display:inline-block;vertical-align:middle"></span>상한 도달</span>
+        </div>
+        <div class="band-svg-wrap" id="band-svg-wrap-2"></div>
+      </div>
+      <div class="metrics" id="traj-metrics"></div>
+      <div id="traj-warn" class="warn-box" style="display:none"></div>
+      <div id="traj-insight" class="insight" style="display:none"></div>
+      <div id="traj-pros-cons"></div>
+    </div>
+  </div>
+
+  <!-- 하단: 직원별 편집 카드 나란히 -->
+  <div style="margin-top:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:500">직원별 설정 편집</div>
+      <span style="font-size:11px;color:#888">변경 즉시 차트에 반영됩니다</span>
+    </div>
+    <div id="all-editors" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px"></div>
+  </div>
+
+</div>
+</div>
+
+<script>
+const TCOLORS=['#1D6FD6','#D85A30','#1D9E75','#7F77DD','#C07000','#D4537E'];
+const AVBG=['#E6F1FB','#FAECE7','#E1F5EE','#EEEDFE','#FAEEDA','#FBEAF0'];
+const AVFG=['#185FA5','#712B13','#085041','#3C3489','#633806','#72243E'];
+const RATINGS=['S','A','B','C','D'];
+
+function fmt(n){return Math.round(n).toLocaleString();}
+
+let BS={
+  numGrades:5, baseMid:2500,
+  midRises:[25,25,25,25,25,25],
+  spreads:[20,25,30,35,40,45,50],
+  promoDurations:[3,3,4,4,5,5,6],  // years per grade before promotion
+  bandTimeScale:true,
+  payzone:false, pzFactor:12,
+  compaZone:true, czFactor:25,
+  rates:{S:10,A:7,B:4,C:1,D:0},
+  promoMode:'bonus', promoBonus:15
+};
+let persons=[], activeIdx=0;
+
+function getGrades(){
+  const n=BS.numGrades; const g=[]; let mid=BS.baseMid;
+  for(let i=0;i<n;i++){
+    const sp=BS.spreads[i]||20; const half=mid*sp/200;
+    g.push({name:'G'+(i+1),mid:Math.round(mid),min:Math.round(mid-half),max:Math.round(mid+half),spread:sp});
+    if(i<n-1) mid=mid*(1+(BS.midRises[i]||20)/100);
+  }
+  return g;
+}
+
+function getGradeRateFactor(gi){
+  if(!BS.payzone) return 1;
+  return Math.max(0,1-gi*BS.pzFactor/100);
+}
+
+function getCompaRatio(sal,grade){
+  return grade.mid>0 ? sal/grade.mid*100 : 100;
+}
+
+function getBandPositionLabel(sal,grade){
+  const cr=getCompaRatio(sal,grade);
+  if(cr<85) return '하한권 · 빠른 보정 필요';
+  if(cr<95) return '중간값 이하 · 성장 여지 큼';
+  if(cr<=105) return '중간값 근처 · 표준 위치';
+  if(cr<=115) return '중간값 초과 · 인상률 완화 구간';
+  return '상한 접근 · 승진/역할확대 검토';
+}
+
+function getCompaZoneFactor(sal,grade){
+  if(!BS.compaZone) return 1;
+  const cr=getCompaRatio(sal,grade);
+  const f=BS.czFactor/100;
+  if(cr<80) return 1+1.6*f;
+  if(cr<90) return 1+1.0*f;
+  if(cr<100) return 1+0.5*f;
+  if(cr<110) return 1;
+  if(cr<120) return Math.max(0,1-0.7*f);
+  return Math.max(0,1-1.4*f);
+}
+
+function getEffRate(base,gi,sal=null){
+  const grades=getGrades();
+  const grade=grades[Math.min(gi,grades.length-1)];
+  const gradeFactor=getGradeRateFactor(gi);
+  const compaFactor=sal==null ? 1 : getCompaZoneFactor(sal,grade);
+  return +Math.max(0,base*gradeFactor*compaFactor).toFixed(1);
+}
+
+function calcPromoSal(cur,toGi,grades){
+  const nxt=grades[toGi];
+  if(BS.promoMode==='keep-or-min') return Math.max(cur,nxt.min);
+  return Math.max(Math.round(cur*(1+BS.promoBonus/100)),nxt.min);
+}
+
+function simulate(p){
+  const grades=getGrades(); const n=grades.length;
+  let sal=p.startSalary, gi=Math.min(p.startGrade,n-1);
+  const data=[{year:0,sal,gi,rating:'-',action:'-',cappedMax:false}];
+  for(let y=0;y<Math.min(p.yearsCount,p.years.length);y++){
+    const yr=p.years[y]; const rt=yr.rating||'B'; const ac=yr.action||'none';
+    const rate=getEffRate(BS.rates[rt]||0,gi,sal);
+    let ns=Math.round(sal*(1+rate/100));
+    if(ac==='promo'&&gi<n-1){ns=calcPromoSal(ns,gi+1,grades);gi++;}
+    const cMax=grades[gi].max, cMin=grades[gi].min;
+    const cappedMax=ns>cMax;
+    ns=Math.min(ns,cMax); ns=Math.max(ns,cMin);
+    sal=ns;
+    data.push({year:y+1,sal,gi,rating:rt,action:ac,cappedMax});
+  }
+  return data;
+}
+
+// ============================================================
+// TAB1: 직급별 박스 차트 (Pay Band 설정 탭용)
+// ============================================================
+function drawBandSVG(wrapperId, grades){
+  const wrap=document.getElementById(wrapperId);
+  if(!wrap) return;
+  const W=wrap.offsetWidth||wrap.clientWidth||700;
+  const H=400;
+  const PAD={top:20,right:36,bottom:52,left:72};
+  const plotW=W-PAD.left-PAD.right;
+  const plotH=H-PAD.top-PAD.bottom;
+  const n=grades.length;
+  const useTime=!!BS.bandTimeScale;
+  const durations=Array.from({length:n},(_,i)=>Math.max(1,+(BS.promoDurations[i]||3)));
+  const totalDur=durations.reduce((a,b)=>a+b,0);
+
+  // 직급 균등 간격 vs 평균 승진 소요기간 비례 폭
+  function xStart(gi){
+    if(!useTime) return PAD.left + gi*(plotW/n);
+    return PAD.left + plotW*durations.slice(0,gi).reduce((a,b)=>a+b,0)/totalDur;
+  }
+  function xEnd(gi){
+    if(!useTime) return PAD.left + (gi+1)*(plotW/n);
+    return PAD.left + plotW*durations.slice(0,gi+1).reduce((a,b)=>a+b,0)/totalDur;
+  }
+  function xCenter(gi){ return (xStart(gi)+xEnd(gi))/2; }
+
+  const yMin=Math.min(...grades.map(g=>g.min))*0.95;
+  const yMax=Math.max(...grades.map(g=>g.max))*1.05;
+  function yOf(v){ return PAD.top + plotH*(1-(v-yMin)/(yMax-yMin)); }
+
+  let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:${H}px">`;
+
+  // Y grid + labels
+  for(let i=0;i<=5;i++){
+    const v=yMin+(yMax-yMin)*i/5;
+    const y=yOf(v);
+    svg+=`<line x1="${PAD.left}" y1="${y.toFixed(1)}" x2="${W-PAD.right}" y2="${y.toFixed(1)}" stroke="#e8e7e3" stroke-width="1"/>`;
+    svg+=`<text x="${PAD.left-6}" y="${(y+4).toFixed(1)}" text-anchor="end" font-size="10" fill="#888">${fmt(Math.round(v))}만</text>`;
+  }
+
+  // duration-based boundary labels
+  if(useTime){
+    let acc=0;
+    for(let gi=0;gi<=n;gi++){
+      const x=gi===n ? PAD.left+plotW : xStart(gi);
+      svg+=`<line x1="${x.toFixed(1)}" y1="${PAD.top}" x2="${x.toFixed(1)}" y2="${H-PAD.bottom}" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>`;
+      svg+=`<text x="${x.toFixed(1)}" y="${(H-PAD.bottom+16).toFixed(1)}" text-anchor="middle" font-size="10" fill="#888">${acc}년</text>`;
+      if(gi<n) acc+=durations[gi];
+    }
+  }
+
+  // Per-grade time blocks / columns
+  grades.forEach((g,gi)=>{
+    const xs=xStart(gi), xe=xEnd(gi), cx=xCenter(gi);
+    const padX=Math.max(4,Math.min(14,(xe-xs)*0.08));
+    const boxX=xs+padX, boxW=Math.max(8,(xe-xs)-padX*2);
+    const yTop=yOf(g.max), yBot=yOf(g.min), bh=yBot-yTop;
+    const fill=useTime ? (gi%2===0?'rgba(55,138,221,0.12)':'rgba(55,138,221,0.18)') : 'rgba(55,138,221,0.16)';
+    svg+=`<rect x="${boxX.toFixed(1)}" y="${yTop.toFixed(1)}" width="${boxW.toFixed(1)}" height="${bh.toFixed(1)}" rx="4"
+      fill="${fill}" stroke="rgba(24,95,165,0.45)" stroke-width="1.5"/>`;
+    svg+=`<line x1="${boxX.toFixed(1)}" y1="${yTop.toFixed(1)}" x2="${(boxX+boxW).toFixed(1)}" y2="${yTop.toFixed(1)}" stroke="#aaa" stroke-width="1" stroke-dasharray="4,3"/>`;
+    svg+=`<line x1="${boxX.toFixed(1)}" y1="${yBot.toFixed(1)}" x2="${(boxX+boxW).toFixed(1)}" y2="${yBot.toFixed(1)}" stroke="#aaa" stroke-width="1" stroke-dasharray="4,3"/>`;
+    const ym=yOf(g.mid);
+    svg+=`<line x1="${boxX.toFixed(1)}" y1="${ym.toFixed(1)}" x2="${(boxX+boxW).toFixed(1)}" y2="${ym.toFixed(1)}" stroke="#E24B4A" stroke-width="2"/>`;
+    svg+=`<circle cx="${cx.toFixed(1)}" cy="${ym.toFixed(1)}" r="4" fill="#E24B4A" stroke="#fff" stroke-width="1.5"/>`;
+    const label=useTime?`${g.name} · ${durations[gi]}년`:g.name;
+    svg+=`<text x="${cx.toFixed(1)}" y="${(H-PAD.bottom+31).toFixed(1)}" text-anchor="middle" font-size="12" fill="#555">${label}</text>`;
+    if(boxW>46){
+      svg+=`<text x="${(boxX+boxW-4).toFixed(1)}" y="${(yTop+4).toFixed(1)}" text-anchor="end" font-size="9" fill="#888">${fmt(g.max)}</text>`;
+      svg+=`<text x="${(boxX+boxW-4).toFixed(1)}" y="${(ym+4).toFixed(1)}" text-anchor="end" font-size="9" fill="#E24B4A">${fmt(g.mid)}</text>`;
+      svg+=`<text x="${(boxX+boxW-4).toFixed(1)}" y="${(yBot+4).toFixed(1)}" text-anchor="end" font-size="9" fill="#888">${fmt(g.min)}</text>`;
+    }
+  });
+
+  // Mid value connecting line
+  const midPts=grades.map((g,gi)=>`${xCenter(gi).toFixed(1)},${yOf(g.mid).toFixed(1)}`).join(' ');
+  svg+=`<polyline points="${midPts}" fill="none" stroke="#E24B4A" stroke-width="1.5" stroke-dasharray="5,4" opacity="0.6"/>`;
+
+  // Axes
+  svg+=`<line x1="${PAD.left}" y1="${H-PAD.bottom}" x2="${W-PAD.right}" y2="${H-PAD.bottom}" stroke="#d3d1c7" stroke-width="1"/>`;
+  svg+=`<line x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${H-PAD.bottom}" stroke="#d3d1c7" stroke-width="1"/>`;
+  svg+=`<text x="${(PAD.left-52).toFixed(1)}" y="${(PAD.top+plotH/2).toFixed(1)}" text-anchor="middle" font-size="11" fill="#888" transform="rotate(-90,${PAD.left-52},${PAD.top+plotH/2})">연봉 (만원)</text>`;
+  svg+=`<text x="${(PAD.left+plotW/2).toFixed(1)}" y="${(H-4).toFixed(1)}" text-anchor="middle" font-size="11" fill="#888">${useTime?'누적 경력연수(평균 승진 소요기간 기준)':'직급'}</text>`;
+  svg+='</svg>';
+  wrap.innerHTML=svg;
+}
+
+// ============================================================
+// TAB2: 수평 띠 + 연차 기준 궤적 차트 (경력 궤적 탭용)
+// ============================================================
+function drawTrajSVG(wrapperId, grades, simsList, names){
+  const wrap=document.getElementById(wrapperId);
+  if(!wrap) return;
+  const W=wrap.offsetWidth||wrap.clientWidth||700;
+  const H=430;
+  const PAD={top:20,right:90,bottom:44,left:72};
+  const plotW=W-PAD.left-PAD.right;
+  const plotH=H-PAD.top-PAD.bottom;
+
+  // x축: 연차. 최대 연차 = 가장 긴 시뮬레이션
+  const maxYear=simsList.length>0 ? Math.max(...simsList.map(s=>s[s.length-1].year)) : 20;
+  const xMax=maxYear+1;
+  function xOf(yr){ return PAD.left + (yr/xMax)*plotW; }
+
+  // y축: 모든 밴드 min/max + 모든 궤적 값
+  const allVals=[...grades.map(g=>g.min),...grades.map(g=>g.max)];
+  simsList.forEach(sim=>sim.forEach(d=>allVals.push(d.sal)));
+  const rawMin=Math.min(...allVals), rawMax=Math.max(...allVals);
+  const yPad=(rawMax-rawMin)*0.07;
+  const yMin=rawMin-yPad, yMax=rawMax+yPad;
+  function yOf(v){ return PAD.top + plotH*(1-(v-yMin)/(yMax-yMin)); }
+
+  let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:${H}px">`;
+
+  // ── 수평 띠: 각 직급의 min~max 를 전체 너비에 걸쳐 그림 ──
+  // alternating subtle background + band fill
+  const bandColors=[
+    'rgba(55,138,221,0.08)',
+    'rgba(55,138,221,0.14)',
+    'rgba(55,138,221,0.08)',
+    'rgba(55,138,221,0.14)',
+    'rgba(55,138,221,0.08)',
+    'rgba(55,138,221,0.14)',
+    'rgba(55,138,221,0.08)',
+  ];
+  const x1=PAD.left, x2=PAD.left+plotW;
+
+  grades.forEach((g,gi)=>{
+    const yTop=yOf(g.max), yBot=yOf(g.min), bh=yBot-yTop;
+    // band fill
+    svg+=`<rect x="${x1}" y="${yTop.toFixed(1)}" width="${plotW}" height="${bh.toFixed(1)}"
+      fill="${bandColors[gi]}" stroke="none"/>`;
+    // top & bottom band boundary lines
+    svg+=`<line x1="${x1}" y1="${yTop.toFixed(1)}" x2="${x2}" y2="${yTop.toFixed(1)}" stroke="rgba(24,95,165,0.30)" stroke-width="1" stroke-dasharray="4,4"/>`;
+    svg+=`<line x1="${x1}" y1="${yBot.toFixed(1)}" x2="${x2}" y2="${yBot.toFixed(1)}" stroke="rgba(24,95,165,0.30)" stroke-width="1" stroke-dasharray="4,4"/>`;
+    // mid line (faint red dashed across full width)
+    const ym=yOf(g.mid);
+    svg+=`<line x1="${x1}" y1="${ym.toFixed(1)}" x2="${x2}" y2="${ym.toFixed(1)}" stroke="#E24B4A" stroke-width="1" stroke-dasharray="6,5" opacity="0.35"/>`;
+    // grade label on right side
+    const labelY=((yTop+yBot)/2+4).toFixed(1);
+    svg+=`<text x="${(x2+6).toFixed(1)}" y="${labelY}" font-size="11" font-weight="500" fill="rgba(24,95,165,0.75)">${g.name}</text>`;
+    // mid value label
+    svg+=`<text x="${(x2+6).toFixed(1)}" y="${(ym+4).toFixed(1)}" font-size="9" fill="#E24B4A" opacity="0.7">${fmt(g.mid)}</text>`;
+  });
+
+  // Y grid lines + labels (draw after bands so they appear on top)
+  for(let i=0;i<=5;i++){
+    const v=yMin+(yMax-yMin)*i/5;
+    const y=yOf(v);
+    svg+=`<line x1="${PAD.left}" y1="${y.toFixed(1)}" x2="${x2}" y2="${y.toFixed(1)}" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>`;
+    svg+=`<text x="${PAD.left-6}" y="${(y+4).toFixed(1)}" text-anchor="end" font-size="10" fill="#888">${fmt(Math.round(v))}만</text>`;
+  }
+
+  // X grid (every year or every 2/5 years depending on range)
+  const xStep = xMax<=15 ? 1 : xMax<=25 ? 2 : 5;
+  for(let yr=0;yr<=xMax;yr+=xStep){
+    const x=xOf(yr);
+    svg+=`<line x1="${x.toFixed(1)}" y1="${PAD.top}" x2="${x.toFixed(1)}" y2="${H-PAD.bottom}" stroke="rgba(0,0,0,0.05)" stroke-width="1"/>`;
+    svg+=`<text x="${x.toFixed(1)}" y="${(H-PAD.bottom+14).toFixed(1)}" text-anchor="middle" font-size="10" fill="#888">${yr}년</text>`;
+  }
+
+  // ── 개인 궤적 선 ──
+  simsList.forEach((sim,pi)=>{
+    const col=TCOLORS[pi%TCOLORS.length];
+
+    // polyline
+    const pts=sim.map(d=>`${xOf(d.year).toFixed(1)},${yOf(d.sal).toFixed(1)}`).join(' ');
+    svg+=`<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2.2" stroke-linejoin="round"/>`;
+
+    // dots
+    sim.forEach((d,di)=>{
+      const cx=xOf(d.year), cy=yOf(d.sal);
+      const isPromo=d.action==='promo';
+      const isCap=d.cappedMax;
+      if(isPromo){
+        // 승진: 위를 향한 삼각형
+        const ts=6;
+        svg+=`<polygon points="${cx.toFixed(1)},${(cy-ts).toFixed(1)} ${(cx-ts*0.87).toFixed(1)},${(cy+ts*0.5).toFixed(1)} ${(cx+ts*0.87).toFixed(1)},${(cy+ts*0.5).toFixed(1)}"
+          fill="${col}" stroke="#fff" stroke-width="1.5"/>`;
+      } else if(isCap){
+        // 상한 도달: 빨간 점
+        svg+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5" fill="#E24B4A" stroke="#fff" stroke-width="1.5"/>`;
+      } else {
+        // 첫점과 5년 단위만 dot, 나머지는 작게
+        const r=(di===0||d.year%5===0)?3.5:2;
+        svg+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r}" fill="${col}" stroke="#fff" stroke-width="1.2"/>`;
+      }
+    });
+
+    // 끝점에 이름 레이블
+    const last=sim[sim.length-1];
+    const lx=(xOf(last.year)+7).toFixed(1);
+    const ly=(yOf(last.sal)+4).toFixed(1);
+    svg+=`<text x="${lx}" y="${ly}" font-size="11" font-weight="500" fill="${col}">${names[pi]}</text>`;
+  });
+
+  // Axes
+  svg+=`<line x1="${PAD.left}" y1="${H-PAD.bottom}" x2="${x2}" y2="${H-PAD.bottom}" stroke="#d3d1c7" stroke-width="1"/>`;
+  svg+=`<line x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${H-PAD.bottom}" stroke="#d3d1c7" stroke-width="1"/>`;
+  svg+=`<text x="${(PAD.left-52).toFixed(1)}" y="${(PAD.top+plotH/2).toFixed(1)}" text-anchor="middle" font-size="11" fill="#888" transform="rotate(-90,${PAD.left-52},${PAD.top+plotH/2})">연봉 (만원)</text>`;
+  svg+=`<text x="${(PAD.left+plotW/2).toFixed(1)}" y="${(H-3).toFixed(1)}" text-anchor="middle" font-size="11" fill="#888">연차 (년)</text>`;
+
+  svg+='</svg>';
+  wrap.innerHTML=svg;
+}
+// ============================================================
+function renderMidRiseInputs(){
+  const n=BS.numGrades; let h='<table class="grade-tbl"><thead><tr>';
+  for(let i=0;i<n-1;i++) h+=`<th>G${i+1}→G${i+2}</th>`;
+  h+='</tr></thead><tbody><tr>';
+  for(let i=0;i<n-1;i++) h+=`<td><input type="number" id="mr-${i}" min="1" max="100" value="${BS.midRises[i]||20}" onchange="BS.midRises[${i}]=Math.max(1,+this.value||20);updateBand()"><br><span style="font-size:10px;color:#888">%</span></td>`;
+  h+='</tr></tbody></table>';
+  document.getElementById('midrise-inputs').innerHTML=h;
+}
+
+function renderSpreadInputs(){
+  const n=BS.numGrades; let h='<table class="grade-tbl"><thead><tr>';
+  for(let i=0;i<n;i++) h+=`<th>G${i+1}</th>`;
+  h+='</tr></thead><tbody><tr>';
+  for(let i=0;i<n;i++) h+=`<td><input type="number" id="sp-${i}" min="5" max="100" value="${BS.spreads[i]||20}" onchange="BS.spreads[${i}]=Math.max(5,+this.value||20);updateBand()"><br><span style="font-size:10px;color:#888">%</span></td>`;
+  h+='</tr></tbody></table>';
+  document.getElementById('spread-inputs').innerHTML=h;
+}
+
+function renderPromoDurInputs(){
+  const n=BS.numGrades;
+  let h='<table class="grade-tbl"><thead><tr>';
+  for(let i=0;i<n;i++) h+=`<th>${'G'+(i+1)}</th>`;
+  h+='</tr></thead><tbody><tr>';
+  for(let i=0;i<n;i++) h+=`<td><input type="number" id="pd-${i}" min="1" max="15" value="${BS.promoDurations[i]||3}" onchange="BS.promoDurations[${i}]=Math.max(1,+this.value||3);updateBand()"><br><span style="font-size:10px;color:#888">년</span></td>`;
+  h+='</tr></tbody></table>';
+  document.getElementById('promo-dur-inputs').innerHTML=h;
+}
+
+function curMRP(){return document.querySelector('[name=mr-p]:checked')?.value||'flat';}
+function curSPP(){return document.querySelector('[name=sp-p]:checked')?.value||'graduated';}
+
+function applyMRP(pat){
+  const n=BS.numGrades; const base=+document.getElementById('b-mrBase').value||25;
+  document.getElementById('b-mrBase-v').textContent=base+'%';
+  document.querySelectorAll('[name=mr-p]').forEach(r=>r.closest('.radio-opt').classList.toggle('selected',r.value===pat));
+  const el=document.querySelector(`[name=mr-p][value="${pat}"]`); if(el)el.checked=true;
+  for(let i=0;i<n-1;i++){
+    let v=base;
+    if(pat==='progressive') v=base*(0.6+0.8*(i/Math.max(n-2,1)));
+    else if(pat==='degressive') v=base*(1.4-0.8*(i/Math.max(n-2,1)));
+    BS.midRises[i]=Math.round(v);
+  }
+  renderMidRiseInputs(); updateBand();
+}
+
+function applySPP(pat){
+  const n=BS.numGrades;
+  const lo=+document.getElementById('b-spLow').value||20;
+  const hi=+document.getElementById('b-spHigh').value||40;
+  document.getElementById('b-spLow-v').textContent=lo+'%';
+  document.getElementById('b-spHigh-v').textContent=hi+'%';
+  document.getElementById('b-spHigh-row').style.display=pat==='graduated'?'flex':'none';
+  document.querySelectorAll('[name=sp-p]').forEach(r=>r.closest('.radio-opt').classList.toggle('selected',r.value===pat));
+  const el=document.querySelector(`[name=sp-p][value="${pat}"]`); if(el)el.checked=true;
+  for(let i=0;i<n;i++){
+    if(pat==='broadband') BS.spreads[i]=60;
+    else if(pat==='flat') BS.spreads[i]=lo;
+    else BS.spreads[i]=Math.round(lo+(hi-lo)*(i/Math.max(n-1,1)));
+  }
+  renderSpreadInputs(); updateBand();
+}
+
+function selectPromoMode(mode){
+  BS.promoMode=mode;
+  document.querySelectorAll('[name=promo-mode]').forEach(r=>r.closest('.radio-opt').classList.toggle('selected',r.value===mode));
+  const el=document.querySelector(`[name=promo-mode][value="${mode}"]`); if(el)el.checked=true;
+  document.getElementById('promo-bonus-row').style.display=mode==='bonus'?'flex':'none';
+  updateBand();
+}
+
+function onNumGradesChange(){
+  BS.numGrades=+document.getElementById('b-numGrades').value;
+  while(BS.midRises.length<BS.numGrades) BS.midRises.push(BS.midRises[BS.midRises.length-1]||25);
+  while(BS.spreads.length<BS.numGrades) BS.spreads.push(BS.spreads[BS.spreads.length-1]||30);
+  renderMidRiseInputs(); renderSpreadInputs(); renderPromoDurInputs(); syncGradeSelector(); updateBand(); renderAllEditors();
+}
+
+function syncGradeSelector(){ /* dynamic editors — no static selector */ }
+
+function updateBand(){
+  BS.numGrades=+document.getElementById('b-numGrades').value;
+  BS.baseMid=+document.getElementById('b-base').value;
+  BS.payzone=document.getElementById('b-payzone').checked;
+  BS.bandTimeScale=document.getElementById('b-timeScale')?.checked ?? true;
+  BS.pzFactor=+document.getElementById('b-pzF').value;
+  BS.compaZone=document.getElementById('b-compazone').checked;
+  BS.czFactor=+document.getElementById('b-czF').value;
+  ['S','A','B','C','D'].forEach(r=>BS.rates[r]=+document.getElementById(`b-${r}`).value);
+  BS.promoBonus=+document.getElementById('b-promo').value;
+
+  document.getElementById('b-base-v').textContent=fmt(BS.baseMid)+'만';
+  document.getElementById('b-pzF-v').textContent=BS.pzFactor+'%p';
+  document.getElementById('b-czF-v').textContent=BS.czFactor+'%';
+  ['S','A','B','C','D'].forEach(r=>document.getElementById(`b-${r}-v`).textContent=BS.rates[r]+'%');
+  document.getElementById('pz-row').style.display=BS.payzone?'flex':'none';
+  document.getElementById('cz-row').style.display=BS.compaZone?'flex':'none';
+  const xl=document.getElementById('band-xmode-label');
+  if(xl) xl.textContent=BS.bandTimeScale?'x축 = 평균 승진 소요기간':'x축 = 직급 균등 간격';
+
+  const grades=getGrades();
+  drawBandSVG('band-svg-wrap-1', grades);
+  renderRateMatrix(grades);
+  renderOverlapTable(grades);
+  renderBandSummary(grades);
+  updateTrajectoryCharts();
+}
+
+function renderRateMatrix(grades){
+  const rC={S:'#185FA5',A:'#3B6D11',B:'#854F0B',C:'#993556',D:'#A32D2D'};
+  const tbl=document.getElementById('rate-matrix');
+  tbl.querySelector('thead').innerHTML='<tr><th>직급</th>'+RATINGS.map(r=>`<th style="color:${rC[r]}">${r}</th>`).join('')+'</tr>';
+  tbl.querySelector('tbody').innerHTML=grades.map((g,gi)=>`<tr><td><strong>${g.name}</strong></td>${RATINGS.map(r=>{const v=getEffRate(BS.rates[r],gi);const c=v>=BS.rates.S*0.7?'badge-S':v>=BS.rates.B?'badge-A':v>0?'badge-B':'badge-D';return `<td><span class="badge ${c}">${v}%</span></td>`;}).join('')}</tr>`).join('');
+}
+
+function renderOverlapTable(grades){
+  document.getElementById('overlap-tbody').innerHTML=grades.map((g,i)=>{
+    let mrT='-',ovT='-';
+    if(i>0) mrT=((g.mid-grades[i-1].mid)/grades[i-1].mid*100).toFixed(1)+'%';
+    if(i<grades.length-1){
+      const nxt=grades[i+1]; const ov=(g.max-nxt.min)/(nxt.max-nxt.min)*100;
+      const c=ov>50?'badge-D':ov>30?'badge-warn':ov>0?'badge-A':'badge-info';
+      ovT=`<span class="badge ${c}">${ov.toFixed(1)}%</span>`;
+    }
+    return `<tr><td><strong>${g.name}</strong></td><td>${fmt(g.min)}만</td><td>${fmt(g.mid)}만</td><td>${fmt(g.max)}만</td><td><span class="badge badge-info">${g.spread}%</span></td><td>${mrT}</td><td>${ovT}</td></tr>`;
+  }).join('');
+}
+
+function renderBandSummary(grades){
+  const n=grades.length;
+  const ratio=(grades[n-1].mid/grades[0].mid).toFixed(1);
+  const avgSp=(grades.reduce((a,g)=>a+g.spread,0)/n).toFixed(0);
+  document.getElementById('band-metrics').innerHTML=`
+    <div class="metric"><div class="lbl">직급 수</div><div class="num">${n}개</div></div>
+    <div class="metric"><div class="lbl">G1 중간값</div><div class="num">${fmt(grades[0].mid)}만</div></div>
+    <div class="metric"><div class="lbl">G${n} 중간값</div><div class="num">${fmt(grades[n-1].mid)}만</div></div>
+    <div class="metric"><div class="lbl">배율</div><div class="num">${ratio}배</div></div>
+    <div class="metric"><div class="lbl">평균 범위폭</div><div class="num">${avgSp}%</div></div>`;
+  document.getElementById('band-insight').textContent=`💡 최상/최하 배율 ${ratio}배 | 평균 범위폭 ${avgSp}% | ${BS.payzone?`직급별 감쇠(직급당 ${BS.pzFactor}%p)`:'직급 감쇠 없음'} · ${BS.compaZone?`Compa-ratio Pay Zone(강도 ${BS.czFactor}%)`:'Compa-ratio 조정 없음'} | 승진→${{bonus:'승진가산형','keep-or-min':'하한 보정형'}[BS.promoMode]}`;
+  document.getElementById('band-pros-cons').innerHTML=`<div class="pros-cons">
+    <div class="pros"><h4>현재 설계 장점</h4><ul>
+      <li>직급별 개별 설정 → 정교한 차등화</li>
+      <li>${BS.payzone?'직급별 감쇠: 고직급 인건비 상승 통제':'직급 감쇠 없음: 운영 단순'}</li>
+      <li>${{bonus:'승진 동기부여 강화','keep-or-min':'인건비 통제와 안정감 유지'}[BS.promoMode]}</li>
+    </ul></div>
+    <div class="cons"><h4>유의사항</h4><ul>
+      <li>직급별 설정 복잡 → 직원 설명 필요</li>
+      <li>${BS.compaZone?'Compa-ratio 상위권자의 인상률 둔화 설명 필요':'밴드 내 위치별 인상률 조정 부재'}</li>
+      <li>${{bonus:'승진 남발 시 인건비 급증','keep-or-min':'승진의 금전적 체감이 약할 수 있음'}[BS.promoMode]}</li>
+    </ul></div>
+  </div>`;
+}
+
+// ---- Trajectory ----
+function updateTrajectoryCharts(){
+  if(persons.length===0){
+    const ew=document.getElementById('band-svg-wrap-2'); if(ew) ew.innerHTML='';
+    document.getElementById('traj-metrics').innerHTML='';
+    document.getElementById('traj-insight').style.display='none';
+    document.getElementById('traj-warn').style.display='none';
+    document.getElementById('traj-pros-cons').innerHTML='';
+    return;
+  }
+  const grades=getGrades();
+  const allSims=persons.map(p=>simulate(p));
+  const names=persons.map(p=>p.name);
+
+  // SVG overlay
+  drawTrajSVG('band-svg-wrap-2', grades, allSims, names);
+
+  // update legend
+  let lgHtml=`<span class="leg-item"><span class="leg-swatch" style="background:rgba(55,138,221,0.18);border:1.5px solid rgba(24,95,165,0.45)"></span>밴드 범위</span>
+    <span class="leg-item"><span style="width:18px;height:2px;background:#E24B4A;display:inline-block;border-radius:1px"></span>중간값</span>`;
+  persons.forEach((p,i)=>lgHtml+=`<span class="leg-item"><span class="leg-swatch" style="background:${TCOLORS[i%TCOLORS.length]}"></span>${p.name}</span>`);
+  lgHtml+=`<span class="leg-item" style="color:#888;font-size:10px">▲=승진</span>`;
+  document.getElementById('traj-legend-row').innerHTML=lgHtml;
+
+  // summary metrics — all persons
+  const metricsEl=document.getElementById('traj-metrics');
+  let mhtml='';
+  allSims.forEach((sim,i)=>{
+    const p=persons[i]; const final=sim[sim.length-1];
+    const growth=((final.sal-p.startSalary)/p.startSalary*100).toFixed(1);
+    const col=TCOLORS[i%TCOLORS.length];
+    mhtml+=`<div class="metric" style="border-top:3px solid ${col}">
+      <div class="lbl" style="color:${col}">${p.name}</div>
+      <div class="num">${fmt(final.sal)}만</div>
+      <div style="font-size:11px;color:#888">+${growth}% | G${p.startGrade+1}→G${final.gi+1}</div>
+      <div style="font-size:10px;color:#888">CR ${getCompaRatio(final.sal,grades[final.gi]).toFixed(0)}% · ${getBandPositionLabel(final.sal,grades[final.gi])}</div>
+    </div>`;
+  });
+  metricsEl.innerHTML=mhtml;
+
+  // insight: any person hitting cap?
+  const anyCapH=allSims.some(sim=>sim.some(d=>d.cappedMax));
+  const wEl=document.getElementById('traj-warn');
+  if(anyCapH){wEl.style.display='block';wEl.textContent='⚠ 일부 인원이 밴드 상한에 도달했습니다. 승진 기회 확대 또는 Broad Band 도입을 검토하세요.';}
+  else wEl.style.display='none';
+  const finalGaps=allSims.map(s=>s[s.length-1].sal);
+  const gap=finalGaps.length>1?Math.max(...finalGaps)-Math.min(...finalGaps):0;
+  const insEl=document.getElementById('traj-insight');
+  insEl.style.display=persons.length>1?'block':'none';
+  if(persons.length>1) insEl.textContent=`💡 최고/최저 최종 연봉 격차: ${fmt(gap)}만원. 성과등급 패턴과 승진 시점의 복리 누적 결과입니다.`;
+  document.getElementById('traj-pros-cons').innerHTML='';
+}
+
+function addPerson(){
+  const el=document.getElementById('new-name');
+  const name=el.value.trim()||'직원'+(persons.length+1);
+  const g=getGrades();
+  persons.push({name,startGrade:0,startSalary:g[0].mid,yearsCount:15,years:Array.from({length:15},()=>({rating:'B',action:'none'}))});
+  el.value='';
+  renderAllEditors(); updateTrajectoryCharts();
+}
+
+function selectPerson(idx){activeIdx=idx;renderAllEditors();updateTrajectoryCharts();}
+
+function deletePerson(idx){
+  persons.splice(idx,1);
+  if(activeIdx>=persons.length) activeIdx=Math.max(0,persons.length-1);
+  renderAllEditors(); updateTrajectoryCharts();
+}
+
+// 모든 직원 편집 카드를 나란히 렌더링
+function renderAllEditors(){
+  const container=document.getElementById('all-editors');
+  if(!container) return;
+  container.innerHTML='';
+  persons.forEach((p,pi)=>{
+    const sim=simulate(p); const final=sim[sim.length-1];
+    const sN=p.years.slice(0,p.yearsCount).filter(y=>y.rating==='S').length;
+    const cN=p.years.slice(0,p.yearsCount).filter(y=>y.rating==='C').length;
+    const pN=p.years.slice(0,p.yearsCount).filter(y=>y.action==='promo').length;
+    const col=TCOLORS[pi%TCOLORS.length];
+    const n=BS.numGrades;
+
+    const card=document.createElement('div');
+    card.className='card';
+    card.style.cssText='margin-bottom:0;border-top:3px solid '+col;
+
+    // header
+    let h=`<div style="display:flex;align-items:center;gap:7px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #f0eeea">
+      <div class="avatar" style="background:${AVBG[pi%6]};color:${AVFG[pi%6]}">${p.name.slice(0,2)}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500">${p.name}</div>
+        <div style="font-size:11px;color:#888">G${p.startGrade+1}→G${final.gi+1} | 최종 <strong>${fmt(final.sal)}만</strong> | CR ${getCompaRatio(final.sal,getGrades()[final.gi]).toFixed(0)}%</div>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="deletePerson(${pi})">삭제</button>
+    </div>`;
+
+    // 기본 설정
+    const gradeOpts=Array.from({length:n},(_,i)=>`<option value="${i}"${p.startGrade===i?' selected':''}>G${i+1}</option>`).join('');
+    h+=`<div class="ctrl"><label style="min-width:80px">입사 직급</label>
+      <select onchange="persons[${pi}].startGrade=+this.value;renderAllEditors();updateTrajectoryCharts();">${gradeOpts}</select>
+    </div>`;
+    h+=`<div class="ctrl"><label style="min-width:80px">입사 연봉</label>
+      <input type="range" min="1500" max="12000" step="100" value="${p.startSalary}"
+        oninput="persons[${pi}].startSalary=+this.value;this.nextElementSibling.textContent=fmt(this.value)+'만';updateTrajectoryCharts();">
+      <span class="val">${fmt(p.startSalary)}만</span>
+    </div>`;
+    h+=`<div class="ctrl"><label style="min-width:80px">기간</label>
+      <select onchange="persons[${pi}].yearsCount=+this.value;while(persons[${pi}].years.length<persons[${pi}].yearsCount)persons[${pi}].years.push({rating:'B',action:'none'});renderAllEditors();updateTrajectoryCharts();">
+        <option value="10"${p.yearsCount===10?' selected':''}>10년</option>
+        <option value="15"${p.yearsCount===15?' selected':''}>15년</option>
+        <option value="20"${p.yearsCount===20?' selected':''}>20년</option>
+      </select>
+    </div>`;
+
+    // 빠른 패턴
+    h+=`<div style="font-size:11px;color:#888;margin:8px 0 4px">빠른 패턴</div>
+    <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px">
+      ${['전기간 S','전기간 A','전기간 B','전기간 C','S→C','C→S','S/B 번갈아','5년마다 승진'].map((label,ki)=>{
+        const codes=['S','A','B','C','StoC','CtoS','altSB','promo5'];
+        return `<button class="pattern-btn" style="font-size:10px;padding:3px 6px" onclick="applyPatternFor(${pi},'${codes[ki]}')">${label}</button>`;
+      }).join('')}
+    </div>`;
+
+    // 통계
+    h+=`<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+      <span class="badge badge-S">S×${sN}</span>
+      <span class="badge badge-C">C×${cN}</span>
+      <span style="font-size:10px;color:#888">승진 ${pN}회</span>
+    </div>`;
+
+    // 연도별 행
+    h+=`<div style="font-size:11px;font-weight:500;color:#555;margin-bottom:4px">연도별 설정</div>
+    <div style="padding-right:2px" id="yr-rows-${pi}"></div>`;
+
+    card.innerHTML=h;
+    container.appendChild(card);
+
+    // 연도별 행 렌더링
+    const yrContainer=card.querySelector(`#yr-rows-${pi}`);
+    let curGi=p.startGrade;
+    for(let i=0;i<p.yearsCount;i++){
+      const yr=p.years[i]||{rating:'B',action:'none'};
+      const row=document.createElement('div');
+      row.className='year-row';
+      row.innerHTML=`<span class="year-num">${i+1}년</span>
+        <span class="year-gtag" style="color:${col}">G${curGi+1}</span>
+        <select class="yr-sel" style="width:58px" onchange="persons[${pi}].years[${i}].rating=this.value;renderAllEditors();updateTrajectoryCharts();">
+          ${RATINGS.map(r=>`<option value="${r}"${yr.rating===r?' selected':''}>${r}</option>`).join('')}
+        </select>
+        <select class="yr-sel" style="flex:1" onchange="persons[${pi}].years[${i}].action=this.value;renderAllEditors();updateTrajectoryCharts();">
+          <option value="none"${yr.action==='none'?' selected':''}>횡보</option>
+          <option value="promo"${yr.action==='promo'?' selected':''}${curGi>=n-1?' disabled':''}>승진</option>
+        </select>`;
+      yrContainer.appendChild(row);
+      if(yr.action==='promo'&&curGi<n-1) curGi++;
+    }
+  });
+}
+
+// 특정 인원에 패턴 적용
+function applyPatternFor(pi, pt){
+  const p=persons[pi]; const n=p.yearsCount; const h=Math.floor(n/2);
+  for(let i=0;i<n;i++){
+    if(pt==='S') p.years[i].rating='S';
+    else if(pt==='A') p.years[i].rating='A';
+    else if(pt==='B') p.years[i].rating='B';
+    else if(pt==='C') p.years[i].rating='C';
+    else if(pt==='StoC') p.years[i].rating=i<h?'S':'C';
+    else if(pt==='CtoS') p.years[i].rating=i<h?'C':'S';
+    else if(pt==='altSB') p.years[i].rating=i%2===0?'S':'B';
+    if(pt==='promo5') p.years[i].action=(i>0&&(i+1)%5===0)?'promo':'none';
+    else if(pt!=='promo5') p.years[i].action='none';
+  }
+  renderAllEditors(); updateTrajectoryCharts();
+}
+
+// legacy stubs (called from old code paths — now no-ops or redirect)
+function renderPersonList(){ renderAllEditors(); }
+function loadEditor(){ renderAllEditors(); }
+function renderYearRows(){ renderAllEditors(); }
+
+function onYrChange(idx,field,val){persons[activeIdx].years[idx][field]=val;renderYearRows();renderPersonList();updateTrajectoryCharts();}
+
+function applyPattern(pt){
+  const p=persons[activeIdx]; const n=p.yearsCount; const h=Math.floor(n/2);
+  for(let i=0;i<n;i++){
+    if(pt==='S') p.years[i].rating='S';
+    else if(pt==='A') p.years[i].rating='A';
+    else if(pt==='B') p.years[i].rating='B';
+    else if(pt==='C') p.years[i].rating='C';
+    else if(pt==='StoC') p.years[i].rating=i<h?'S':'C';
+    else if(pt==='CtoS') p.years[i].rating=i<h?'C':'S';
+    else if(pt==='altSB') p.years[i].rating=i%2===0?'S':'B';
+    if(pt==='promo5') p.years[i].action=(i>0&&(i+1)%5===0)?'promo':'none';
+    else if(pt!=='promo5') p.years[i].action='none';
+  }
+  renderYearRows();renderPersonList();updateTrajectoryCharts();
+}
+
+
+
+function switchTab(t){
+  ['band','trajectory'].forEach((id,i)=>{
+    document.querySelectorAll('.tab')[i].classList.toggle('active',id===t);
+    document.getElementById('tab-'+id).classList.toggle('active',id===t);
+  });
+  const g=getGrades();
+  if(t==='band'){
+    drawBandSVG('band-svg-wrap-1',g);
+  } else {
+    const tzEl=document.getElementById('t-payzone');
+    const tzFEl=document.getElementById('t-pzF');
+    const czEl=document.getElementById('t-compazone');
+    const czFEl=document.getElementById('t-czF');
+    if(tzEl) tzEl.checked=BS.payzone;
+    if(tzFEl){ tzFEl.value=BS.pzFactor; document.getElementById('t-pzF-v').textContent=BS.pzFactor+'%p'; }
+    if(czEl) czEl.checked=BS.compaZone;
+    if(czFEl){ czFEl.value=BS.czFactor; document.getElementById('t-czF-v').textContent=BS.czFactor+'%'; }
+    const pzRow=document.getElementById('t-pzF-row');
+    const czRow=document.getElementById('t-czF-row');
+    if(pzRow) pzRow.style.display=BS.payzone?'flex':'none';
+    if(czRow) czRow.style.display=BS.compaZone?'flex':'none';
+    renderAllEditors();
+    updateTrajectoryCharts();
+  }
+}
+
+function initDefaults(){
+  const sP=Array.from({length:15},(_,i)=>({rating:'S',action:i===4||i===9?'promo':'none'}));
+  const mP=Array.from({length:15},(_,i)=>({rating:i%3===0?'S':i%3===1?'A':'B',action:i===5||i===11?'promo':'none'}));
+  const cP=Array.from({length:15},()=>({rating:'C',action:'none'}));
+  persons=[
+    {name:'김고성과(S)',startGrade:0,startSalary:2500,yearsCount:15,years:sP},
+    {name:'이보통(혼합)',startGrade:0,startSalary:2500,yearsCount:15,years:mP},
+    {name:'박저성과(C)',startGrade:0,startSalary:2500,yearsCount:15,years:cP},
+  ];
+  renderMidRiseInputs(); renderSpreadInputs(); renderPromoDurInputs();
+  selectPromoMode('bonus'); syncGradeSelector();
+  updateBand();
+  renderAllEditors();
+  // ensure band chart drawn after layout
+  requestAnimationFrame(()=>{ const g=getGrades(); drawBandSVG('band-svg-wrap-1',g); });
+}
+
+initDefaults();
+// redraw SVGs on resize
+window.addEventListener('resize',()=>{
+  const g=getGrades();
+  drawBandSVG('band-svg-wrap-1',g);
+  if(persons.length>0){
+    const sims=persons.map(p=>simulate(p));
+    drawTrajSVG('band-svg-wrap-2',g,sims,persons.map(p=>p.name));
+  }
+});
+</script>
+</body>
+</html>
