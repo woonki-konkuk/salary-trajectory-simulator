@@ -74,11 +74,12 @@ select.yr-sel{padding:2px 4px;font-size:11px;border:1px solid #d3d1c7;border-rad
 .radio-opt:hover{border-color:#b5d4f4}.radio-opt.selected{border-color:#185FA5;background:#f0f6fc}
 .radio-opt input[type=radio]{margin-top:2px;accent-color:#185FA5;flex-shrink:0}
 .radio-opt .opt-title{font-size:12px;font-weight:500}.radio-opt .opt-desc{font-size:11px;color:#888;margin-top:1px}
-.grade-tbl{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:4px}
-.grade-tbl th{background:#f5f5f3;padding:5px 3px;text-align:center;font-weight:500;font-size:11px;color:#666;border-bottom:1px solid #e5e4df}
-.grade-tbl td{padding:3px;text-align:center}
-.grade-tbl input[type=number]{width:50px;padding:3px 4px;font-size:12px;border:1px solid #d3d1c7;border-radius:4px;text-align:center}
-.grade-tbl input[type=number]:focus{outline:none;border-color:#185FA5}
+.grade-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(58px,1fr));gap:7px;margin-bottom:5px;width:100%}
+.grade-cell{background:#f9f9f7;border:1px solid #eee;border-radius:7px;padding:6px 4px;text-align:center;min-width:0}
+.grade-cell .g-label{font-size:11px;color:#666;font-weight:500;margin-bottom:4px;white-space:nowrap}
+.grade-cell input[type=number]{width:100%;max-width:58px;padding:3px 4px;font-size:12px;border:1px solid #d3d1c7;border-radius:4px;text-align:center;background:#fff}
+.grade-cell input[type=number]:focus{outline:none;border-color:#185FA5}
+.grade-cell .unit{display:block;font-size:10px;color:#888;margin-top:2px}
 /* SVG band chart */
 .band-svg-wrap{width:100%;overflow:hidden}
 .band-svg-wrap svg{display:block;width:100%}
@@ -589,30 +590,24 @@ function drawTrajSVG(wrapperId, grades, simsList, names){
 }
 // ============================================================
 function renderMidRiseInputs(){
-  const n=BS.numGrades; let h='<table class="grade-tbl"><thead><tr>';
-  for(let i=0;i<n-1;i++) h+=`<th>G${i+1}→G${i+2}</th>`;
-  h+='</tr></thead><tbody><tr>';
-  for(let i=0;i<n-1;i++) h+=`<td><input type="number" id="mr-${i}" min="1" max="100" value="${BS.midRises[i]||20}" onchange="BS.midRises[${i}]=Math.max(1,+this.value||20);updateBand()"><br><span style="font-size:10px;color:#888">%</span></td>`;
-  h+='</tr></tbody></table>';
+  const n=BS.numGrades; let h='<div class="grade-grid">';
+  for(let i=0;i<n-1;i++) h+=`<div class="grade-cell"><div class="g-label">G${i+1}→G${i+2}</div><input type="number" id="mr-${i}" min="1" max="100" value="${BS.midRises[i]||20}" onchange="BS.midRises[${i}]=Math.max(1,+this.value||20);updateBand()"><span class="unit">%</span></div>`;
+  h+='</div>';
   document.getElementById('midrise-inputs').innerHTML=h;
 }
 
 function renderSpreadInputs(){
-  const n=BS.numGrades; let h='<table class="grade-tbl"><thead><tr>';
-  for(let i=0;i<n;i++) h+=`<th>G${i+1}</th>`;
-  h+='</tr></thead><tbody><tr>';
-  for(let i=0;i<n;i++) h+=`<td><input type="number" id="sp-${i}" min="5" max="100" value="${BS.spreads[i]||20}" onchange="BS.spreads[${i}]=Math.max(5,+this.value||20);updateBand()"><br><span style="font-size:10px;color:#888">%</span></td>`;
-  h+='</tr></tbody></table>';
+  const n=BS.numGrades; let h='<div class="grade-grid">';
+  for(let i=0;i<n;i++) h+=`<div class="grade-cell"><div class="g-label">G${i+1}</div><input type="number" id="sp-${i}" min="5" max="100" value="${BS.spreads[i]||20}" onchange="BS.spreads[${i}]=Math.max(5,+this.value||20);updateBand()"><span class="unit">%</span></div>`;
+  h+='</div>';
   document.getElementById('spread-inputs').innerHTML=h;
 }
 
 function renderPromoDurInputs(){
   const n=BS.numGrades;
-  let h='<table class="grade-tbl"><thead><tr>';
-  for(let i=0;i<n;i++) h+=`<th>${'G'+(i+1)}</th>`;
-  h+='</tr></thead><tbody><tr>';
-  for(let i=0;i<n;i++) h+=`<td><input type="number" id="pd-${i}" min="1" max="15" value="${BS.promoDurations[i]||3}" onchange="BS.promoDurations[${i}]=Math.max(1,+this.value||3);updateBand()"><br><span style="font-size:10px;color:#888">년</span></td>`;
-  h+='</tr></tbody></table>';
+  let h='<div class="grade-grid">';
+  for(let i=0;i<n;i++) h+=`<div class="grade-cell"><div class="g-label">G${i+1}</div><input type="number" id="pd-${i}" min="1" max="15" value="${BS.promoDurations[i]||3}" onchange="BS.promoDurations[${i}]=Math.max(1,+this.value||3);updateBand()"><span class="unit">년</span></div>`;
+  h+='</div>';
   document.getElementById('promo-dur-inputs').innerHTML=h;
 }
 
