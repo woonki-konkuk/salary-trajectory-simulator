@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>급여 경력 궤적 시뮬레이터</title>
+<title>급여 궤적 시뮬레이터</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -80,6 +80,14 @@ select.yr-sel{padding:2px 4px;font-size:11px;border:1px solid #d3d1c7;border-rad
 .grade-cell input[type=number]{width:100%;max-width:58px;padding:3px 4px;font-size:12px;border:1px solid #d3d1c7;border-radius:4px;text-align:center;background:#fff}
 .grade-cell input[type=number]:focus{outline:none;border-color:#185FA5}
 .grade-cell .unit{display:block;font-size:10px;color:#888;margin-top:2px}
+
+.editor-ctrl{display:grid;grid-template-columns:86px minmax(0,1fr);align-items:center;gap:8px;margin-bottom:9px}
+.editor-ctrl label{font-size:12px;color:#6b6b67;white-space:nowrap}
+.editor-ctrl select{width:100%;min-width:0;padding:5px 7px;font-size:12px;border:1px solid #d3d1c7;border-radius:6px;background:#fff}
+.salary-ctrl{display:grid;grid-template-columns:86px minmax(0,1fr) 72px;align-items:center;gap:8px;margin-bottom:9px}
+.salary-ctrl label{font-size:12px;color:#6b6b67;white-space:nowrap}
+.salary-ctrl input[type=range]{width:100%;min-width:0;accent-color:#378ADD}
+.salary-ctrl .val{font-size:12px;font-weight:500;min-width:0;text-align:right;white-space:nowrap}
 /* SVG band chart */
 .band-svg-wrap{width:100%;overflow:hidden}
 .band-svg-wrap svg{display:block;width:100%}
@@ -87,12 +95,13 @@ select.yr-sel{padding:2px 4px;font-size:11px;border:1px solid #d3d1c7;border-rad
 </head>
 <body>
 <div class="app">
-<h1>급여 경력 궤적 시뮬레이터</h1>
-<p class="subtitle">Pay Band 설계 → Pay Band 위에서 개인 궤적 확인</p>
+<h1>급여 궤적 시뮬레이터</h1>
+<p class="subtitle">Pay Band 설계 → 급여 궤적과 Band 내 위치 분석</p>
 
 <div class="tabs">
   <button class="tab active" onclick="switchTab('band')">① Pay Band 설정</button>
-  <button class="tab" onclick="switchTab('trajectory')">② 경력 궤적 설계</button>
+  <button class="tab" onclick="switchTab('trajectory')">② 급여 궤적 설계</button>
+  <button class="tab" onclick="switchTab('position')">③ 직급별 Pay Band 이동</button>
 </div>
 
 <!-- TAB 1 -->
@@ -108,8 +117,8 @@ select.yr-sel{padding:2px 4px;font-size:11px;border:1px solid #d3d1c7;border-rad
           </select>
         </div>
         <div class="ctrl"><label>G1 기준 중간값 (만원)</label>
-          <input type="range" id="b-base" min="1500" max="6000" step="100" value="2500" oninput="updateBand()">
-          <span class="val" id="b-base-v">2,500만</span>
+          <input type="range" id="b-base" min="1500" max="6000" step="100" value="3000" oninput="updateBand()">
+          <span class="val" id="b-base-v">3,000만</span>
         </div>
       </div>
 
@@ -261,7 +270,7 @@ select.yr-sel{padding:2px 4px;font-size:11px;border:1px solid #d3d1c7;border-rad
 
     <div class="col-right">
       <div class="chart-box">
-        <div class="section-label" style="margin-top:0;margin-bottom:8px">Pay Band 위 개인 궤적</div>
+        <div class="section-label" style="margin-top:0;margin-bottom:8px">Pay Band 위 개인 급여 궤적</div>
         <div class="legend-row" id="traj-legend-row">
           <span class="leg-item"><span class="leg-swatch" style="background:rgba(55,138,221,0.11);border:1px dashed rgba(24,95,165,0.30)"></span>직급별 수평 밴드</span>
           <span class="leg-item"><span style="width:20px;height:0;border-top:2px dashed #E24B4A;display:inline-block;vertical-align:middle;opacity:0.4"></span>중간값</span>
@@ -283,10 +292,51 @@ select.yr-sel{padding:2px 4px;font-size:11px;border:1px solid #d3d1c7;border-rad
       <div style="font-size:13px;font-weight:500">직원별 설정 편집</div>
       <span style="font-size:11px;color:#888">변경 즉시 차트에 반영됩니다</span>
     </div>
-    <div id="all-editors" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px"></div>
+    <div id="all-editors" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px"></div>
   </div>
 
 </div>
+</div>
+
+
+<!-- TAB 3 -->
+<div id="tab-position" class="panel">
+  <div class="row">
+    <div class="col-left">
+      <div class="card">
+        <div class="card-title">Pay Band 위치 이동이란?</div>
+        <div class="insight" style="margin-top:0">각 직원의 연차별 급여 이동을 x축=직급인 Pay Band 그래프 위에 표시합니다. 같은 직급 안에서 급여가 밴드 하단에서 상단으로 이동하고, 승진하면 다음 직급 밴드로 넘어가는 모습을 확인할 수 있습니다.</div>
+        <div class="section-label">읽는 방법</div>
+        <table class="cmp-table">
+          <tbody>
+            <tr><td><strong>파란 영역</strong></td><td>각 직급의 Pay Band 범위</td></tr>
+            <tr><td><strong>빨간 점선</strong></td><td>각 직급의 중간값</td></tr>
+            <tr><td><strong>굵은 선</strong></td><td>해당 직원의 연차별 급여 궤적</td></tr>
+            <tr><td><strong>▲</strong></td><td>승진 시점</td></tr>
+            <tr><td><strong>빨간 점</strong></td><td>밴드 상한 도달</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">수업 질문</div>
+        <div class="warn-box" style="margin-top:0">승진 직전에는 기존 직급 밴드의 상단에 가까워질 수 있고, 승진 직후에는 새 직급 밴드의 하단 또는 중간 이하로 재진입할 수 있습니다.</div>
+        <div class="warn-box">고성과자가 상한에 빨리 닿는다면 승진 속도, 밴드 폭, 성과 인상률 중 무엇을 조정해야 할지 토론해 보세요.</div>
+      </div>
+    </div>
+    <div class="col-right">
+      <div class="metrics" id="position-metrics"></div>
+      <div class="chart-box">
+        <div class="section-label" style="margin-top:0;margin-bottom:8px">직급별 Pay Band 위 급여 이동</div>
+        <div class="legend-row" id="person-band-legend-row"></div>
+        <div id="person-band-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:12px"></div>
+      </div>
+      <div class="chart-box">
+        <div class="section-label" style="margin-top:0;margin-bottom:6px">승진 전후 Pay Band 위치 변화</div>
+        <div style="overflow-x:auto"><table class="cmp-table"><thead><tr><th>직원</th><th>승진 연차</th><th>이동</th><th>승진 전 급여</th><th>승진 후 급여</th><th>해석</th></tr></thead><tbody id="promo-shift-tbody"></tbody></table></div>
+      </div>
+      <div id="position-insight" class="insight"></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -298,7 +348,7 @@ const RATINGS=['S','A','B','C','D'];
 function fmt(n){return Math.round(n).toLocaleString();}
 
 let BS={
-  numGrades:5, baseMid:2500,
+  numGrades:5, baseMid:3000,
   midRises:[25,25,25,25,25,25],
   spreads:[20,25,30,35,40,45,50],
   promoDurations:[3,3,4,4,5,5,6],  // years per grade before promotion
@@ -327,6 +377,12 @@ function getGradeRateFactor(gi){
 
 function getCompaRatio(sal,grade){
   return grade.mid>0 ? sal/grade.mid*100 : 100;
+}
+
+function getBandPosition(sal,grade){
+  const span=grade.max-grade.min;
+  if(span<=0) return 50;
+  return Math.max(0,Math.min(100,(sal-grade.min)/span*100));
 }
 
 function getBandPositionLabel(sal,grade){
@@ -471,7 +527,7 @@ function drawBandSVG(wrapperId, grades){
 }
 
 // ============================================================
-// TAB2: 수평 띠 + 연차 기준 궤적 차트 (경력 궤적 탭용)
+// TAB2: 수평 띠 + 연차 기준 궤적 차트 (급여 궤적 탭용)
 // ============================================================
 function drawTrajSVG(wrapperId, grades, simsList, names){
   const wrap=document.getElementById(wrapperId);
@@ -544,7 +600,7 @@ function drawTrajSVG(wrapperId, grades, simsList, names){
     svg+=`<text x="${x.toFixed(1)}" y="${(H-PAD.bottom+14).toFixed(1)}" text-anchor="middle" font-size="10" fill="#888">${yr}년</text>`;
   }
 
-  // ── 개인 궤적 선 ──
+  // ── 개인 급여 궤적 선 ──
   simsList.forEach((sim,pi)=>{
     const col=TCOLORS[pi%TCOLORS.length];
 
@@ -606,7 +662,7 @@ function renderSpreadInputs(){
 function renderPromoDurInputs(){
   const n=BS.numGrades;
   let h='<div class="grade-grid">';
-  for(let i=0;i<n;i++) h+=`<div class="grade-cell"><div class="g-label">G${i+1}</div><input type="number" id="pd-${i}" min="1" max="15" value="${BS.promoDurations[i]||3}" onchange="BS.promoDurations[${i}]=Math.max(1,+this.value||3);updateBand()"><span class="unit">년</span></div>`;
+  for(let i=0;i<n;i++) h+=`<div class="grade-cell"><div class="g-label">G${i+1}</div><input type="number" id="pd-${i}" min="1" max="15" value="${BS.promoDurations[i]||3}" onchange="BS.promoDurations[${i}]=Math.max(1,+this.value||3);syncScheduledPromotions();updateBand();renderAllEditors();"><span class="unit">년</span></div>`;
   h+='</div>';
   document.getElementById('promo-dur-inputs').innerHTML=h;
 }
@@ -657,6 +713,8 @@ function onNumGradesChange(){
   BS.numGrades=+document.getElementById('b-numGrades').value;
   while(BS.midRises.length<BS.numGrades) BS.midRises.push(BS.midRises[BS.midRises.length-1]||25);
   while(BS.spreads.length<BS.numGrades) BS.spreads.push(BS.spreads[BS.spreads.length-1]||30);
+  while(BS.promoDurations.length<BS.numGrades) BS.promoDurations.push(BS.promoDurations[BS.promoDurations.length-1]||4);
+  syncScheduledPromotions();
   renderMidRiseInputs(); renderSpreadInputs(); renderPromoDurInputs(); syncGradeSelector(); updateBand(); renderAllEditors();
 }
 
@@ -735,6 +793,168 @@ function renderBandSummary(grades){
   </div>`;
 }
 
+
+function drawPersonBandSVG(wrapperId, grades, sim, name, color){
+  const wrap=document.getElementById(wrapperId);
+  if(!wrap) return;
+  if(!sim || sim.length===0){wrap.innerHTML='';return;}
+  const W=wrap.offsetWidth||wrap.clientWidth||520;
+  const H=330;
+  const PAD={top:24,right:54,bottom:46,left:68};
+  const plotW=W-PAD.left-PAD.right;
+  const plotH=H-PAD.top-PAD.bottom;
+  const n=grades.length;
+  const step=plotW/n;
+  const boxW=step*0.70;
+  function gradeCenter(gi){return PAD.left+gi*step+step/2;}
+
+  const vals=[...grades.map(g=>g.min),...grades.map(g=>g.max),...sim.map(d=>d.sal)];
+  const rawMin=Math.min(...vals), rawMax=Math.max(...vals);
+  const yPad=(rawMax-rawMin)*0.08 || 100;
+  const yMin=rawMin-yPad, yMax=rawMax+yPad;
+  function yOf(v){return PAD.top+plotH*(1-(v-yMin)/(yMax-yMin));}
+
+  // 같은 직급 안에서 여러 연차가 겹치지 않도록, 직급 박스 내부에서 시간 순서대로 좌우 배치
+  const byGrade={};
+  sim.forEach((d,idx)=>{
+    if(!byGrade[d.gi]) byGrade[d.gi]=[];
+    byGrade[d.gi].push(idx);
+  });
+  const pointX={};
+  Object.keys(byGrade).forEach(k=>{
+    const arr=byGrade[k];
+    const gi=+k;
+    const left=gradeCenter(gi)-boxW/2;
+    arr.forEach((simIdx,j)=>{
+      const denom=Math.max(arr.length,1);
+      pointX[simIdx]=left+boxW*((j+0.5)/denom);
+    });
+  });
+
+  let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:${H}px">`;
+
+  // Y grid + labels
+  for(let i=0;i<=5;i++){
+    const v=yMin+(yMax-yMin)*i/5;
+    const y=yOf(v);
+    svg+=`<line x1="${PAD.left}" y1="${y.toFixed(1)}" x2="${(PAD.left+plotW).toFixed(1)}" y2="${y.toFixed(1)}" stroke="rgba(0,0,0,0.06)" stroke-width="1"/>`;
+    svg+=`<text x="${PAD.left-6}" y="${(y+4).toFixed(1)}" text-anchor="end" font-size="10" fill="#888">${fmt(Math.round(v))}만</text>`;
+  }
+
+  // 직급별 Pay Band 박스
+  grades.forEach((g,gi)=>{
+    const cx=gradeCenter(gi);
+    const yTop=yOf(g.max), yBot=yOf(g.min), bh=yBot-yTop;
+    const x= cx-boxW/2;
+    svg+=`<rect x="${x.toFixed(1)}" y="${yTop.toFixed(1)}" width="${boxW.toFixed(1)}" height="${bh.toFixed(1)}" rx="5"
+      fill="rgba(55,138,221,0.12)" stroke="rgba(24,95,165,0.35)" stroke-width="1.2"/>`;
+    svg+=`<line x1="${x.toFixed(1)}" y1="${yTop.toFixed(1)}" x2="${(x+boxW).toFixed(1)}" y2="${yTop.toFixed(1)}" stroke="rgba(24,95,165,0.38)" stroke-width="1" stroke-dasharray="4,3"/>`;
+    svg+=`<line x1="${x.toFixed(1)}" y1="${yBot.toFixed(1)}" x2="${(x+boxW).toFixed(1)}" y2="${yBot.toFixed(1)}" stroke="rgba(24,95,165,0.38)" stroke-width="1" stroke-dasharray="4,3"/>`;
+    const ym=yOf(g.mid);
+    svg+=`<line x1="${x.toFixed(1)}" y1="${ym.toFixed(1)}" x2="${(x+boxW).toFixed(1)}" y2="${ym.toFixed(1)}" stroke="#E24B4A" stroke-width="1.6" opacity="0.65"/>`;
+    svg+=`<text x="${cx.toFixed(1)}" y="${(H-PAD.bottom+16).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="500" fill="#555">G${gi+1}</text>`;
+    svg+=`<text x="${cx.toFixed(1)}" y="${(H-PAD.bottom+30).toFixed(1)}" text-anchor="middle" font-size="9" fill="#888">${fmt(g.min)}~${fmt(g.max)}</text>`;
+  });
+
+  // 시간 순서 급여 궤적: x축은 직급, 동일 직급 내에서는 연차 순서대로 박스 안에서 이동
+  const pts=sim.map((d,idx)=>`${pointX[idx].toFixed(1)},${yOf(d.sal).toFixed(1)}`).join(' ');
+  svg+=`<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`;
+
+  sim.forEach((d,idx)=>{
+    const cx=pointX[idx], cy=yOf(d.sal);
+    const isPromo=d.action==='promo';
+    const isCap=d.cappedMax;
+    if(isPromo){
+      const ts=6;
+      svg+=`<polygon points="${cx.toFixed(1)},${(cy-ts).toFixed(1)} ${(cx-ts*0.87).toFixed(1)},${(cy+ts*0.5).toFixed(1)} ${(cx+ts*0.87).toFixed(1)},${(cy+ts*0.5).toFixed(1)}" fill="${color}" stroke="#fff" stroke-width="1.5"/>`;
+    } else if(isCap){
+      svg+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5" fill="#E24B4A" stroke="#fff" stroke-width="1.5"/>`;
+    } else {
+      const r=(idx===0||d.year%5===0||idx===sim.length-1)?3.8:2.2;
+      svg+=`<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r}" fill="${color}" stroke="#fff" stroke-width="1.2"/>`;
+    }
+    // 핵심 연차만 라벨 표시해 혼잡을 줄임
+    if(idx===0 || d.year%5===0 || idx===sim.length-1 || isPromo){
+      const label = `${d.year}년`;
+      svg+=`<text x="${cx.toFixed(1)}" y="${(cy-9).toFixed(1)}" text-anchor="middle" font-size="9" fill="${color}" font-weight="500">${label}</text>`;
+    }
+  });
+
+  const last=sim[sim.length-1];
+  const lastIdx=sim.length-1;
+  svg+=`<text x="${Math.min(pointX[lastIdx]+8,W-PAD.right).toFixed(1)}" y="${(yOf(last.sal)+4).toFixed(1)}" font-size="11" font-weight="600" fill="${color}">${fmt(last.sal)}만</text>`;
+
+  // axes
+  svg+=`<line x1="${PAD.left}" y1="${H-PAD.bottom}" x2="${(PAD.left+plotW).toFixed(1)}" y2="${H-PAD.bottom}" stroke="#d3d1c7" stroke-width="1"/>`;
+  svg+=`<line x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${H-PAD.bottom}" stroke="#d3d1c7" stroke-width="1"/>`;
+  svg+=`<text x="${(PAD.left-50).toFixed(1)}" y="${(PAD.top+plotH/2).toFixed(1)}" text-anchor="middle" font-size="11" fill="#888" transform="rotate(-90,${PAD.left-50},${PAD.top+plotH/2})">연봉 (만원)</text>`;
+  svg+=`<text x="${(PAD.left+plotW/2).toFixed(1)}" y="${(H-3).toFixed(1)}" text-anchor="middle" font-size="11" fill="#888">직급 Pay Band</text>`;
+  svg+='</svg>';
+  wrap.innerHTML=svg;
+}
+
+function renderPositionAnalysis(){
+  const grades=getGrades();
+  const sims=persons.map(p=>simulate(p));
+  const names=persons.map(p=>p.name);
+  const met=document.getElementById('position-metrics');
+  const grid=document.getElementById('person-band-grid');
+  if(!met || !grid) return;
+  if(persons.length===0){
+    met.innerHTML=''; grid.innerHTML='';
+    ['promo-shift-tbody','position-insight','person-band-legend-row'].forEach(id=>{const el=document.getElementById(id); if(el) el.innerHTML='';});
+    return;
+  }
+
+  let mhtml='';
+  sims.forEach((sim,i)=>{
+    const p=persons[i]; const final=sim[sim.length-1]; const col=TCOLORS[i%TCOLORS.length];
+    const growth=((final.sal-p.startSalary)/p.startSalary*100).toFixed(1);
+    const caps=sim.filter(d=>d.cappedMax).length;
+    mhtml+=`<div class="metric" style="border-top:3px solid ${col}"><div class="lbl" style="color:${col}">${names[i]}</div><div class="num">${fmt(final.sal)}만</div><div style="font-size:11px;color:#888">G${p.startGrade+1}→G${final.gi+1} · +${growth}% · 상한 ${caps}회</div></div>`;
+  });
+  met.innerHTML=mhtml;
+
+  const legend=document.getElementById('person-band-legend-row');
+  if(legend) legend.innerHTML=`<span class="leg-item"><span class="leg-swatch" style="background:rgba(55,138,221,0.14);border:1px dashed rgba(24,95,165,0.30)"></span>Pay Band 범위</span><span class="leg-item"><span style="width:20px;height:2px;background:#E24B4A;display:inline-block;opacity:.65"></span>중간값</span><span class="leg-item">▲=승진</span><span class="leg-item"><span style="width:10px;height:10px;border-radius:50%;background:#E24B4A;display:inline-block"></span>상한 도달</span>`;
+
+  grid.innerHTML='';
+  sims.forEach((sim,i)=>{
+    const final=sim[sim.length-1]; const col=TCOLORS[i%TCOLORS.length];
+    const id=`person-band-svg-${i}`;
+    const promoCount=sim.filter(d=>d.action==='promo').length;
+    const card=document.createElement('div');
+    card.className='chart-box';
+    card.style.cssText=`margin-bottom:0;border-top:3px solid ${col}`;
+    card.innerHTML=`<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px"><div><div style="font-size:13px;font-weight:600;color:${col}">${names[i]}</div><div style="font-size:11px;color:#888">최종 G${final.gi+1} · ${fmt(final.sal)}만 · 승진 ${promoCount}회</div></div><span class="badge badge-info">직급 x축 Pay Band 그래프</span></div><div class="band-svg-wrap" id="${id}"></div>`;
+    grid.appendChild(card);
+    requestAnimationFrame(()=>drawPersonBandSVG(id,grades,sim,names[i],col));
+  });
+
+  const rows=[];
+  sims.forEach((sim,pi)=>{
+    for(let i=1;i<sim.length;i++){
+      if(sim[i].action==='promo' && sim[i].gi>sim[i-1].gi){
+        const before=sim[i-1], after=sim[i];
+        const bg=grades[before.gi], ag=grades[after.gi];
+        const beforePos=getBandPosition(before.sal,bg), afterPos=getBandPosition(after.sal,ag);
+        let note='승진 후 새 Pay Band로 재진입';
+        if(afterPos<50) note='급여는 상승했지만 새 Band에서는 하위권에서 시작';
+        else if(afterPos>=85) note='승진 후에도 새 Band 상위권에 위치';
+        rows.push(`<tr><td><strong>${names[pi]}</strong></td><td>${after.year}년 차</td><td>G${before.gi+1} → G${after.gi+1}</td><td>${fmt(before.sal)}만 <span style="color:#888">(${beforePos.toFixed(0)}%)</span></td><td>${fmt(after.sal)}만 <span style="color:#888">(${afterPos.toFixed(0)}%)</span></td><td>${note}</td></tr>`);
+      }
+    }
+  });
+  const tbody=document.getElementById('promo-shift-tbody');
+  if(tbody) tbody.innerHTML=rows.length?rows.join(''):'<tr><td colspan="6" style="color:#888;text-align:center">승진 이벤트가 없습니다. ② 급여 궤적 설계 탭에서 승진 시점을 추가해 보세요.</td></tr>';
+
+  const finalSals=sims.map(sim=>sim[sim.length-1].sal);
+  const maxSal=Math.max(...finalSals), minSal=Math.min(...finalSals);
+  const high=names[finalSals.indexOf(maxSal)], low=names[finalSals.indexOf(minSal)];
+  const ins=document.getElementById('position-insight');
+  if(ins) ins.textContent=`💡 이 탭은 각 직원의 급여 이동을 x축=직급인 Pay Band 그래프 위에 표시합니다. 같은 직급 안에서 몇 년에 걸쳐 밴드 안을 이동하다가, 승진 시 다음 직급 밴드로 넘어가는 과정을 볼 수 있습니다. 최종 급여는 ${high}가 ${fmt(maxSal)}만으로 가장 높고, ${low}가 ${fmt(minSal)}만으로 가장 낮습니다.`;
+}
+
 // ---- Trajectory ----
 function updateTrajectoryCharts(){
   if(persons.length===0){
@@ -743,6 +963,7 @@ function updateTrajectoryCharts(){
     document.getElementById('traj-insight').style.display='none';
     document.getElementById('traj-warn').style.display='none';
     document.getElementById('traj-pros-cons').innerHTML='';
+    renderPositionAnalysis();
     return;
   }
   const grades=getGrades();
@@ -786,13 +1007,42 @@ function updateTrajectoryCharts(){
   insEl.style.display=persons.length>1?'block':'none';
   if(persons.length>1) insEl.textContent=`💡 최고/최저 최종 연봉 격차: ${fmt(gap)}만원. 성과등급 패턴과 승진 시점의 복리 누적 결과입니다.`;
   document.getElementById('traj-pros-cons').innerHTML='';
+  renderPositionAnalysis();
+}
+
+function ensurePersonYears(p){
+  if(!p.years) p.years=[];
+  while(p.years.length<p.yearsCount) p.years.push({rating:'B',action:'none'});
+  if(p.years.length>p.yearsCount) p.years=p.years.slice(0,p.yearsCount);
+}
+
+function applyScheduledPromotions(p){
+  ensurePersonYears(p);
+  let gi=Math.min(p.startGrade,BS.numGrades-1);
+  let tenure=0;
+  for(let i=0;i<p.yearsCount;i++){
+    tenure++;
+    p.years[i].action='none';
+    const dur=Math.max(1,+(BS.promoDurations[gi]||3));
+    if(gi<BS.numGrades-1 && tenure>=dur){
+      p.years[i].action='promo';
+      gi++;
+      tenure=0;
+    }
+  }
+}
+
+function syncScheduledPromotions(){
+  persons.forEach(p=>applyScheduledPromotions(p));
 }
 
 function addPerson(){
   const el=document.getElementById('new-name');
   const name=el.value.trim()||'직원'+(persons.length+1);
   const g=getGrades();
-  persons.push({name,startGrade:0,startSalary:g[0].mid,yearsCount:15,years:Array.from({length:15},()=>({rating:'B',action:'none'}))});
+  const p={name,startGrade:0,startSalary:g[0].mid,yearsCount:15,years:Array.from({length:15},()=>({rating:'B',action:'none'}))};
+  applyScheduledPromotions(p);
+  persons.push(p);
   el.value='';
   renderAllEditors(); updateTrajectoryCharts();
 }
@@ -834,16 +1084,16 @@ function renderAllEditors(){
 
     // 기본 설정
     const gradeOpts=Array.from({length:n},(_,i)=>`<option value="${i}"${p.startGrade===i?' selected':''}>G${i+1}</option>`).join('');
-    h+=`<div class="ctrl"><label style="min-width:80px">입사 직급</label>
-      <select onchange="persons[${pi}].startGrade=+this.value;renderAllEditors();updateTrajectoryCharts();">${gradeOpts}</select>
+    h+=`<div class="editor-ctrl"><label>입사 직급</label>
+      <select onchange="persons[${pi}].startGrade=+this.value;applyScheduledPromotions(persons[${pi}]);renderAllEditors();updateTrajectoryCharts();">${gradeOpts}</select>
     </div>`;
-    h+=`<div class="ctrl"><label style="min-width:80px">입사 연봉</label>
+    h+=`<div class="salary-ctrl"><label>입사 연봉</label>
       <input type="range" min="1500" max="12000" step="100" value="${p.startSalary}"
         oninput="persons[${pi}].startSalary=+this.value;this.nextElementSibling.textContent=fmt(this.value)+'만';updateTrajectoryCharts();">
       <span class="val">${fmt(p.startSalary)}만</span>
     </div>`;
-    h+=`<div class="ctrl"><label style="min-width:80px">기간</label>
-      <select onchange="persons[${pi}].yearsCount=+this.value;while(persons[${pi}].years.length<persons[${pi}].yearsCount)persons[${pi}].years.push({rating:'B',action:'none'});renderAllEditors();updateTrajectoryCharts();">
+    h+=`<div class="editor-ctrl"><label>기간</label>
+      <select onchange="persons[${pi}].yearsCount=+this.value;while(persons[${pi}].years.length<persons[${pi}].yearsCount)persons[${pi}].years.push({rating:'B',action:'none'});applyScheduledPromotions(persons[${pi}]);renderAllEditors();updateTrajectoryCharts();">
         <option value="10"${p.yearsCount===10?' selected':''}>10년</option>
         <option value="15"${p.yearsCount===15?' selected':''}>15년</option>
         <option value="20"${p.yearsCount===20?' selected':''}>20년</option>
@@ -853,8 +1103,8 @@ function renderAllEditors(){
     // 빠른 패턴
     h+=`<div style="font-size:11px;color:#888;margin:8px 0 4px">빠른 패턴</div>
     <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px">
-      ${['전기간 S','전기간 A','전기간 B','전기간 C','S→C','C→S','S/B 번갈아','5년마다 승진'].map((label,ki)=>{
-        const codes=['S','A','B','C','StoC','CtoS','altSB','promo5'];
+      ${['전기간 S','전기간 A','전기간 B','전기간 C','S→C','C→S','S/B 번갈아'].map((label,ki)=>{
+        const codes=['S','A','B','C','StoC','CtoS','altSB'];
         return `<button class="pattern-btn" style="font-size:10px;padding:3px 6px" onclick="applyPatternFor(${pi},'${codes[ki]}')">${label}</button>`;
       }).join('')}
     </div>`;
@@ -906,8 +1156,6 @@ function applyPatternFor(pi, pt){
     else if(pt==='StoC') p.years[i].rating=i<h?'S':'C';
     else if(pt==='CtoS') p.years[i].rating=i<h?'C':'S';
     else if(pt==='altSB') p.years[i].rating=i%2===0?'S':'B';
-    if(pt==='promo5') p.years[i].action=(i>0&&(i+1)%5===0)?'promo':'none';
-    else if(pt!=='promo5') p.years[i].action='none';
   }
   renderAllEditors(); updateTrajectoryCharts();
 }
@@ -929,8 +1177,6 @@ function applyPattern(pt){
     else if(pt==='StoC') p.years[i].rating=i<h?'S':'C';
     else if(pt==='CtoS') p.years[i].rating=i<h?'C':'S';
     else if(pt==='altSB') p.years[i].rating=i%2===0?'S':'B';
-    if(pt==='promo5') p.years[i].action=(i>0&&(i+1)%5===0)?'promo':'none';
-    else if(pt!=='promo5') p.years[i].action='none';
   }
   renderYearRows();renderPersonList();updateTrajectoryCharts();
 }
@@ -938,13 +1184,15 @@ function applyPattern(pt){
 
 
 function switchTab(t){
-  ['band','trajectory'].forEach((id,i)=>{
+  ['band','trajectory','position'].forEach((id,i)=>{
     document.querySelectorAll('.tab')[i].classList.toggle('active',id===t);
     document.getElementById('tab-'+id).classList.toggle('active',id===t);
   });
   const g=getGrades();
   if(t==='band'){
     drawBandSVG('band-svg-wrap-1',g);
+  } else if(t==='position'){
+    renderPositionAnalysis();
   } else {
     const tzEl=document.getElementById('t-payzone');
     const tzFEl=document.getElementById('t-pzF');
@@ -964,14 +1212,15 @@ function switchTab(t){
 }
 
 function initDefaults(){
-  const sP=Array.from({length:15},(_,i)=>({rating:'S',action:i===4||i===9?'promo':'none'}));
-  const mP=Array.from({length:15},(_,i)=>({rating:i%3===0?'S':i%3===1?'A':'B',action:i===5||i===11?'promo':'none'}));
+  const sP=Array.from({length:15},()=>({rating:'S',action:'none'}));
+  const mP=Array.from({length:15},(_,i)=>({rating:i%3===0?'S':i%3===1?'A':'B',action:'none'}));
   const cP=Array.from({length:15},()=>({rating:'C',action:'none'}));
   persons=[
-    {name:'김고성과(S)',startGrade:0,startSalary:2500,yearsCount:15,years:sP},
-    {name:'이보통(혼합)',startGrade:0,startSalary:2500,yearsCount:15,years:mP},
-    {name:'박저성과(C)',startGrade:0,startSalary:2500,yearsCount:15,years:cP},
+    {name:'김고성과(S)',startGrade:0,startSalary:3000,yearsCount:15,years:sP},
+    {name:'이보통(혼합)',startGrade:0,startSalary:3000,yearsCount:15,years:mP},
+    {name:'박저성과(C)',startGrade:0,startSalary:3000,yearsCount:15,years:cP},
   ];
+  syncScheduledPromotions();
   renderMidRiseInputs(); renderSpreadInputs(); renderPromoDurInputs();
   selectPromoMode('bonus'); syncGradeSelector();
   updateBand();
@@ -988,6 +1237,7 @@ window.addEventListener('resize',()=>{
   if(persons.length>0){
     const sims=persons.map(p=>simulate(p));
     drawTrajSVG('band-svg-wrap-2',g,sims,persons.map(p=>p.name));
+    renderPositionAnalysis();
   }
 });
 </script>
