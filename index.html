@@ -185,9 +185,9 @@ select.yr-sel{padding:2px 4px;font-size:11px;border:1px solid #d3d1c7;border-rad
           <input type="checkbox" id="b-compazone" checked onchange="updateBand()">
           <span style="font-size:11px;color:#888;flex:1">ON: 동일 직급 내 밴드 위치별 인상률 조정</span>
         </div>
-        <div class="ctrl" id="cz-row"><label>Zone 조정 강도</label>
-          <input type="range" id="b-czF" min="10" max="50" step="5" value="25" oninput="updateBand()">
-          <span class="val" id="b-czF-v">25%</span>
+        <div class="ctrl" id="cz-row"><label>Zone 조정 강도 (%p)</label>
+          <input type="range" id="b-czF" min="0" max="3" step="0.1" value="1" oninput="updateBand()">
+          <span class="val" id="b-czF-v">1.0%p</span>
         </div>
         <div class="divider"></div>
         <div class="ctrl"><label>S등급</label><input type="range" id="b-S" min="0" max="25" step="1" value="10" oninput="updateBand()"><span class="val" id="b-S-v">10%</span></div>
@@ -213,6 +213,11 @@ select.yr-sel{padding:2px 4px;font-size:11px;border:1px solid #d3d1c7;border-rad
       <div class="chart-box">
         <div class="section-label" style="margin-top:0;margin-bottom:6px">직급 × 성과등급 기준 인상률 매트릭스(Compa-ratio 조정 전)</div>
         <div style="overflow-x:auto"><table class="cmp-table" id="rate-matrix"><thead></thead><tbody></tbody></table></div>
+      </div>
+      <div class="chart-box" id="compa-matrix-box">
+        <div class="section-label" style="margin-top:0;margin-bottom:4px">Compa-ratio별 실제 인상률 (G1 기준 · 성과등급별)</div>
+        <p class="tip" style="margin-bottom:8px">밴드 내 위치(Compa-ratio)에 따라 동일 성과등급도 인상률이 달라집니다. Zone 조정 강도가 높을수록 차이가 커집니다.</p>
+        <div style="overflow-x:auto"><table class="cmp-table" id="compa-rate-matrix"><thead></thead><tbody></tbody></table></div>
       </div>
       <div class="chart-box">
         <div class="section-label" style="margin-top:0;margin-bottom:6px">직급별 구조 요약</div>
@@ -259,9 +264,9 @@ select.yr-sel{padding:2px 4px;font-size:11px;border:1px solid #d3d1c7;border-rad
           <input type="checkbox" id="t-compazone" checked onchange="BS.compaZone=this.checked;document.getElementById('b-compazone').checked=this.checked;updateBand()">
           <span style="font-size:11px;color:#888;flex:1">ON: 동일 직급 내 위치별 조정</span>
         </div>
-        <div class="ctrl" id="t-czF-row"><label>Zone 조정 강도</label>
-          <input type="range" id="t-czF" min="10" max="50" step="5" value="25" oninput="BS.czFactor=+this.value;document.getElementById('b-czF').value=this.value;document.getElementById('t-czF-v').textContent=this.value+'%';updateBand()">
-          <span class="val" id="t-czF-v">25%</span>
+        <div class="ctrl" id="t-czF-row"><label>Zone 조정 강도 (%p)</label>
+          <input type="range" id="t-czF" min="0" max="3" step="0.1" value="1" oninput="BS.czFactor=+this.value;document.getElementById('b-czF').value=this.value;document.getElementById('b-czF-v').textContent=(+this.value).toFixed(1)+'%p';document.getElementById('t-czF-v').textContent=(+this.value).toFixed(1)+'%p';updateBand()">
+          <span class="val" id="t-czF-v">1.0%p</span>
         </div>
       </div>
 
@@ -361,7 +366,7 @@ let BS={
   promoDurations:[3,3,4,4,5,5,6],  // years per grade before promotion
   bandTimeScale:true,
   payzone:false, pzFactor:12,
-  compaZone:true, czFactor:25,
+  compaZone:true, czFactor:1,
   rates:{S:10,A:7,B:4,C:1,D:0},
   promoMode:'bonus', promoBonus:15, promoEntryMode:'min', entryPos:'mid', baseRef:'mid'
 };
@@ -406,24 +411,25 @@ function getBandPositionLabel(sal,grade){
   return '상한 접근 · 승진/역할확대 검토';
 }
 
-function getCompaZoneFactor(sal,grade){
-  if(!BS.compaZone) return 1;
+// Compa-ratio에 따른 인상률 %p 조정값 반환 (배율이 아닌 가감)
+function getCompaZoneAdj(sal,grade){
+  if(!BS.compaZone) return 0;
   const cr=getCompaRatio(sal,grade);
-  const f=BS.czFactor/100;
-  if(cr<80) return 1+1.6*f;
-  if(cr<90) return 1+1.0*f;
-  if(cr<100) return 1+0.5*f;
-  if(cr<110) return 1;
-  if(cr<120) return Math.max(0,1-0.7*f);
-  return Math.max(0,1-1.4*f);
+  const p=BS.czFactor; // %p 단위
+  if(cr<80)  return  p*1.5;
+  if(cr<90)  return  p*1.0;
+  if(cr<100) return  p*0.5;
+  if(cr<110) return  0;
+  if(cr<120) return -p*0.5;
+  return            -p*1.0;
 }
 
 function getEffRate(base,gi,sal=null){
   const grades=getGrades();
   const grade=grades[Math.min(gi,grades.length-1)];
   const gradeFactor=getGradeRateFactor(gi);
-  const compaFactor=sal==null ? 1 : getCompaZoneFactor(sal,grade);
-  return +Math.max(0,base*gradeFactor*compaFactor).toFixed(1);
+  const adj=sal==null ? 0 : getCompaZoneAdj(sal,grade);
+  return +Math.max(0, base*gradeFactor + adj).toFixed(1);
 }
 
 function calcPromoSal(cur,toGi,grades){
@@ -756,7 +762,7 @@ function updateBand(){
 
   document.getElementById('b-base-v').textContent=fmt(BS.baseMid)+'만';
   document.getElementById('b-pzF-v').textContent=BS.pzFactor+'%p';
-  document.getElementById('b-czF-v').textContent=BS.czFactor+'%';
+  document.getElementById('b-czF-v').textContent=BS.czFactor.toFixed(1)+'%p';
   ['S','A','B','C','D'].forEach(r=>document.getElementById(`b-${r}-v`).textContent=BS.rates[r]+'%');
   document.getElementById('pz-row').style.display=BS.payzone?'flex':'none';
   document.getElementById('cz-row').style.display=BS.compaZone?'flex':'none';
@@ -766,9 +772,62 @@ function updateBand(){
   const grades=getGrades();
   drawBandSVG('band-svg-wrap-1', grades);
   renderRateMatrix(grades);
+  renderCompaRateMatrix(grades);
   renderOverlapTable(grades);
   renderBandSummary(grades);
   updateTrajectoryCharts();
+}
+
+function renderCompaRateMatrix(grades){
+  const box=document.getElementById('compa-matrix-box');
+  if(box) box.style.display=BS.compaZone?'block':'none';
+  const tbl=document.getElementById('compa-rate-matrix');
+  if(!tbl) return;
+
+  const rC={S:'#185FA5',A:'#3B6D11',B:'#854F0B',C:'#993556',D:'#A32D2D'};
+  const zones=[
+    {label:'cr < 80%',  desc:'밴드 최하단', cr:75},
+    {label:'80~90%',    desc:'하단권',       cr:85},
+    {label:'90~100%',   desc:'중간값 이하',  cr:95},
+    {label:'100~110%',  desc:'중간값 근처',  cr:105},
+    {label:'110~120%',  desc:'중간값 초과',  cr:115},
+    {label:'cr ≥ 120%', desc:'상단 접근',    cr:125},
+  ];
+
+  // 헤더: 성과등급
+  tbl.querySelector('thead').innerHTML=
+    '<tr><th>Compa-ratio</th><th style="color:#888;font-weight:400">위치</th>'+
+    RATINGS.map(r=>`<th style="color:${rC[r]}">${r}</th>`).join('')+'</tr>';
+
+  // G1 기준 (gi=0) 으로 계산
+  const gi=0;
+  const grade=grades[0];
+  tbl.querySelector('tbody').innerHTML=zones.map((z,zi)=>{
+    const gradeFactor=getGradeRateFactor(gi);
+    const isBase=(zi===3);
+    const rowStyle=isBase?'background:#f5f5f3;font-weight:500':'';
+
+    const cells=RATINGS.map(r=>{
+      const base=BS.rates[r];
+      const fakeSal=z.cr*grade.mid/100;
+      const adj=getCompaZoneAdj(fakeSal,grade);
+      const gradeFactor=getGradeRateFactor(gi);
+      const eff=+Math.max(0, base*gradeFactor + adj).toFixed(1);
+      const base0=+Math.max(0,base*gradeFactor).toFixed(1);
+      const diff=+(eff-base0).toFixed(1);
+      const diffStr=diff>0?`<span style="color:#1D9E75;font-size:10px"> +${diff}%p</span>`:
+                    diff<0?`<span style="color:#E24B4A;font-size:10px"> ${diff}%p</span>`:
+                    `<span style="color:#aaa;font-size:10px"> —</span>`;
+      const badgeCls=eff>=BS.rates.S*0.8?'badge-S':eff>=BS.rates.B?'badge-A':eff>0?'badge-B':'badge-D';
+      return `<td><span class="badge ${badgeCls}">${eff}%</span>${diffStr}</td>`;
+    }).join('');
+
+    return `<tr style="${rowStyle}">
+      <td><strong>${z.label}</strong></td>
+      <td style="color:#888;font-size:11px">${z.desc}${isBase?' ← 기준':''}</td>
+      ${cells}
+    </tr>`;
+  }).join('');
 }
 
 function renderRateMatrix(grades){
