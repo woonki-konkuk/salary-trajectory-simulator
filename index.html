@@ -116,7 +116,13 @@ select.yr-sel{padding:2px 4px;font-size:11px;border:1px solid #d3d1c7;border-rad
             <option value="5" selected>5단계</option><option value="6">6단계</option><option value="7">7단계</option>
           </select>
         </div>
-        <div class="ctrl"><label>G1 기준 중간값 (만원)</label>
+        <div class="ctrl"><label>G1 기준 유형</label>
+          <select id="b-baseRef" onchange="updateBand();syncEntryPos()">
+            <option value="mid" selected>중간값 (Mid) 기준</option>
+            <option value="min">초임 (Min) 기준</option>
+          </select>
+        </div>
+        <div class="ctrl"><label id="b-base-label">G1 중간값 (만원)</label>
           <input type="range" id="b-base" min="1500" max="6000" step="100" value="3000" oninput="updateBand()">
           <span class="val" id="b-base-v">3,000만</span>
         </div>
@@ -184,11 +190,11 @@ select.yr-sel{padding:2px 4px;font-size:11px;border:1px solid #d3d1c7;border-rad
           <span class="val" id="b-czF-v">25%</span>
         </div>
         <div class="divider"></div>
-        <div class="ctrl"><label>S등급</label><input type="range" id="b-S" min="5" max="25" step="1" value="10" oninput="updateBand()"><span class="val" id="b-S-v">10%</span></div>
-        <div class="ctrl"><label>A등급</label><input type="range" id="b-A" min="3" max="18" step="1" value="7" oninput="updateBand()"><span class="val" id="b-A-v">7%</span></div>
-        <div class="ctrl"><label>B등급</label><input type="range" id="b-B" min="1" max="12" step="1" value="4" oninput="updateBand()"><span class="val" id="b-B-v">4%</span></div>
-        <div class="ctrl"><label>C등급</label><input type="range" id="b-C" min="0" max="6" step="1" value="1" oninput="updateBand()"><span class="val" id="b-C-v">1%</span></div>
-        <div class="ctrl"><label>D등급</label><input type="range" id="b-D" min="0" max="3" step="1" value="0" oninput="updateBand()"><span class="val" id="b-D-v">0%</span></div>
+        <div class="ctrl"><label>S등급</label><input type="range" id="b-S" min="0" max="25" step="1" value="10" oninput="updateBand()"><span class="val" id="b-S-v">10%</span></div>
+        <div class="ctrl"><label>A등급</label><input type="range" id="b-A" min="0" max="25" step="1" value="7" oninput="updateBand()"><span class="val" id="b-A-v">7%</span></div>
+        <div class="ctrl"><label>B등급</label><input type="range" id="b-B" min="0" max="25" step="1" value="4" oninput="updateBand()"><span class="val" id="b-B-v">4%</span></div>
+        <div class="ctrl"><label>C등급</label><input type="range" id="b-C" min="0" max="25" step="1" value="1" oninput="updateBand()"><span class="val" id="b-C-v">1%</span></div>
+        <div class="ctrl"><label>D등급</label><input type="range" id="b-D" min="0" max="25" step="1" value="0" oninput="updateBand()"><span class="val" id="b-D-v">0%</span></div>
       </div>
     </div>
 
@@ -232,8 +238,9 @@ select.yr-sel{padding:2px 4px;font-size:11px;border:1px solid #d3d1c7;border-rad
         <div class="card-title">승진 시 급여 처리 방식</div>
         <div class="radio-opt" id="pm-keep" onclick="selectPromoMode('keep-or-min')"><input type="radio" name="promo-mode" value="keep-or-min"><div><div class="opt-title">하한 보정형</div><div class="opt-desc">현 급여를 유지하되, 상위직급 하한보다 낮으면 하한까지 보정.</div></div></div>
         <div class="radio-opt selected" id="pm-bonus" onclick="selectPromoMode('bonus')"><input type="radio" name="promo-mode" value="bonus" checked><div><div class="opt-title">승진가산형</div><div class="opt-desc">현 급여에 승진 인상률을 더하고, 하한 미달 시 보정.</div></div></div>
+        <div class="radio-opt" id="pm-min" onclick="selectPromoMode('min-entry')"><input type="radio" name="promo-mode" value="min-entry"><div><div class="opt-title">하단 고정형</div><div class="opt-desc">승진 즉시 상위직급 최솟값(하단)으로 진입. 인건비 통제 극대화.</div></div></div>
         <div class="ctrl" id="promo-bonus-row" style="margin-top:6px"><label>승진 인상률 (%)</label>
-          <input type="range" id="b-promo" min="3" max="40" step="1" value="15" oninput="document.getElementById('b-promo-v').textContent=this.value+'%';updateBand()">
+          <input type="range" id="b-promo" min="3" max="20" step="1" value="15" oninput="document.getElementById('b-promo-v').textContent=this.value+'%';updateBand()">
           <span class="val" id="b-promo-v">15%</span>
         </div>
       </div>
@@ -356,12 +363,17 @@ let BS={
   payzone:false, pzFactor:12,
   compaZone:true, czFactor:25,
   rates:{S:10,A:7,B:4,C:1,D:0},
-  promoMode:'bonus', promoBonus:15
+  promoMode:'bonus', promoBonus:15, promoEntryMode:'min', entryPos:'mid', baseRef:'mid'
 };
 let persons=[], activeIdx=0;
 
 function getGrades(){
-  const n=BS.numGrades; const g=[]; let mid=BS.baseMid;
+  const n=BS.numGrades; const g=[];
+  // baseRef: 'mid' → baseMid가 중간값, 'min' → baseMid가 초임(min)이므로 mid로 역산
+  const sp0=BS.spreads[0]||20;
+  let mid = BS.baseRef==='min'
+    ? Math.round(BS.baseMid / (1 - sp0/200))  // min = mid*(1-sp/200) → mid = min/(1-sp/200)
+    : BS.baseMid;
   for(let i=0;i<n;i++){
     const sp=BS.spreads[i]||20; const half=mid*sp/200;
     g.push({name:'G'+(i+1),mid:Math.round(mid),min:Math.round(mid-half),max:Math.round(mid+half),spread:sp});
@@ -417,6 +429,8 @@ function getEffRate(base,gi,sal=null){
 function calcPromoSal(cur,toGi,grades){
   const nxt=grades[toGi];
   if(BS.promoMode==='keep-or-min') return Math.max(cur,nxt.min);
+  if(BS.promoMode==='min-entry') return nxt.min;
+  // bonus mode
   return Math.max(Math.round(cur*(1+BS.promoBonus/100)),nxt.min);
 }
 
@@ -426,9 +440,12 @@ function simulate(p){
   const data=[{year:0,sal,gi,rating:'-',action:'-',cappedMax:false}];
   for(let y=0;y<Math.min(p.yearsCount,p.years.length);y++){
     const yr=p.years[y]; const rt=yr.rating||'B'; const ac=yr.action||'none';
+    // 1) 성과 인상 (현재 직급 기준 compa 반영)
     const rate=getEffRate(BS.rates[rt]||0,gi,sal);
     let ns=Math.round(sal*(1+rate/100));
-    if(ac==='promo'&&gi<n-1){ns=calcPromoSal(ns,gi+1,grades);gi++;}
+    // 2) 승진 처리
+    if(ac==='promo'&&gi<n-1){ ns=calcPromoSal(ns,gi+1,grades); gi++; }
+    // 3) 밴드 상/하한 클램프
     const cMax=grades[gi].max, cMin=grades[gi].min;
     const cappedMax=ns>cMax;
     ns=Math.min(ns,cMax); ns=Math.max(ns,cMin);
@@ -723,6 +740,10 @@ function syncGradeSelector(){ /* dynamic editors — no static selector */ }
 function updateBand(){
   BS.numGrades=+document.getElementById('b-numGrades').value;
   BS.baseMid=+document.getElementById('b-base').value;
+  const brEl=document.getElementById('b-baseRef');
+  if(brEl){ BS.baseRef=brEl.value; }
+  const lbl=document.getElementById('b-base-label');
+  if(lbl) lbl.textContent=BS.baseRef==='min'?'G1 초임 Min (만원)':'G1 중간값 Mid (만원)';
   BS.payzone=document.getElementById('b-payzone').checked;
   BS.bandTimeScale=document.getElementById('b-timeScale')?.checked ?? true;
   BS.pzFactor=+document.getElementById('b-pzF').value;
@@ -730,6 +751,8 @@ function updateBand(){
   BS.czFactor=+document.getElementById('b-czF').value;
   ['S','A','B','C','D'].forEach(r=>BS.rates[r]=+document.getElementById(`b-${r}`).value);
   BS.promoBonus=+document.getElementById('b-promo').value;
+  const epEl=document.getElementById('b-entryPos');
+  if(epEl) BS.entryPos=epEl.value;
 
   document.getElementById('b-base-v').textContent=fmt(BS.baseMid)+'만';
   document.getElementById('b-pzF-v').textContent=BS.pzFactor+'%p';
@@ -778,17 +801,17 @@ function renderBandSummary(grades){
     <div class="metric"><div class="lbl">G${n} 중간값</div><div class="num">${fmt(grades[n-1].mid)}만</div></div>
     <div class="metric"><div class="lbl">배율</div><div class="num">${ratio}배</div></div>
     <div class="metric"><div class="lbl">평균 범위폭</div><div class="num">${avgSp}%</div></div>`;
-  document.getElementById('band-insight').textContent=`💡 최상/최하 배율 ${ratio}배 | 평균 범위폭 ${avgSp}% | ${BS.payzone?`직급별 감쇠(직급당 ${BS.pzFactor}%p)`:'직급 감쇠 없음'} · ${BS.compaZone?`Compa-ratio Pay Zone(강도 ${BS.czFactor}%)`:'Compa-ratio 조정 없음'} | 승진→${{bonus:'승진가산형','keep-or-min':'하한 보정형'}[BS.promoMode]}`;
+  document.getElementById('band-insight').textContent=`💡 최상/최하 배율 ${ratio}배 | 평균 범위폭 ${avgSp}% | ${BS.payzone?`직급별 감쇠(직급당 ${BS.pzFactor}%p)`:'직급 감쇠 없음'} · ${BS.compaZone?`Compa-ratio Pay Zone(강도 ${BS.czFactor}%)`:'Compa-ratio 조정 없음'} | 승진→${{bonus:'승진가산형','keep-or-min':'하한 보정형','min-entry':'하단 고정형'}[BS.promoMode]}`;
   document.getElementById('band-pros-cons').innerHTML=`<div class="pros-cons">
     <div class="pros"><h4>현재 설계 장점</h4><ul>
       <li>직급별 개별 설정 → 정교한 차등화</li>
       <li>${BS.payzone?'직급별 감쇠: 고직급 인건비 상승 통제':'직급 감쇠 없음: 운영 단순'}</li>
-      <li>${{bonus:'승진 동기부여 강화','keep-or-min':'인건비 통제와 안정감 유지'}[BS.promoMode]}</li>
+      <li>${{bonus:'승진 동기부여 강화','keep-or-min':'인건비 통제와 안정감 유지','min-entry':'승진 시 인건비 통제 극대화, 밴드 내 성장 여지 최대 확보'}[BS.promoMode]}</li>
     </ul></div>
     <div class="cons"><h4>유의사항</h4><ul>
       <li>직급별 설정 복잡 → 직원 설명 필요</li>
       <li>${BS.compaZone?'Compa-ratio 상위권자의 인상률 둔화 설명 필요':'밴드 내 위치별 인상률 조정 부재'}</li>
-      <li>${{bonus:'승진 남발 시 인건비 급증','keep-or-min':'승진의 금전적 체감이 약할 수 있음'}[BS.promoMode]}</li>
+      <li>${{bonus:'승진 남발 시 인건비 급증','keep-or-min':'승진의 금전적 체감이 약할 수 있음','min-entry':'승진 후 초기 급여가 낮아 보일 수 있어 동기부여 저하 가능'}[BS.promoMode]}</li>
     </ul></div>
   </div>`;
 }
@@ -1040,7 +1063,9 @@ function addPerson(){
   const el=document.getElementById('new-name');
   const name=el.value.trim()||'직원'+(persons.length+1);
   const g=getGrades();
-  const p={name,startGrade:0,startSalary:g[0].mid,yearsCount:15,years:Array.from({length:15},()=>({rating:'B',action:'none'}))};
+  const grade=g[0];
+  const initSal=BS.baseRef==='min'?grade.min:grade.mid;
+  const p={name,startGrade:0,startSalary:initSal,yearsCount:15,years:Array.from({length:15},()=>({rating:'B',action:'none'}))};
   applyScheduledPromotions(p);
   persons.push(p);
   el.value='';
@@ -1088,7 +1113,7 @@ function renderAllEditors(){
       <select onchange="persons[${pi}].startGrade=+this.value;applyScheduledPromotions(persons[${pi}]);renderAllEditors();updateTrajectoryCharts();">${gradeOpts}</select>
     </div>`;
     h+=`<div class="salary-ctrl"><label>입사 연봉</label>
-      <input type="range" min="1500" max="12000" step="100" value="${p.startSalary}"
+      <input type="range" min="1500" max="12000" step="100" value="${p.startSalary}" id="sal-range-${pi}"
         oninput="persons[${pi}].startSalary=+this.value;this.nextElementSibling.textContent=fmt(this.value)+'만';updateTrajectoryCharts();">
       <span class="val">${fmt(p.startSalary)}만</span>
     </div>`;
@@ -1209,6 +1234,18 @@ function switchTab(t){
     renderAllEditors();
     updateTrajectoryCharts();
   }
+}
+
+// 초임 진입 기준 변경 시 전 직원 startSalary 동기화
+function syncEntryPos(){
+  const g=getGrades();
+  persons.forEach(p=>{
+    const grade=g[Math.min(p.startGrade,g.length-1)];
+    // 초임은 G1 기준 유형과 동일하게: min 기준이면 min, mid 기준이면 mid
+    p.startSalary=BS.baseRef==='min'?grade.min:grade.mid;
+  });
+  renderAllEditors();
+  updateTrajectoryCharts();
 }
 
 function initDefaults(){
